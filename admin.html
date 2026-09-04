@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Administración - Tu Zona Táctica CCS</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .admin-container {
+            display: flex;
+            min-height: 100vh;
+            background-color: #f5f5f5;
+        }
+        
+        .admin-sidebar {
+            width: 250px;
+            background-color: #1a1a1a;
+            color: white;
+            padding: 20px;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+        }
+        
+        .admin-main {
+            margin-left: 250px;
+            flex: 1;
+            padding: 20px;
+        }
+        
+        .admin-header {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .sidebar-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 30px;
+            color: #ff6b35;
+        }
+        
+        .sidebar-menu {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .sidebar-menu li {
+            margin-bottom: 10px;
+        }
+        
+        .sidebar-menu a {
+            color: #ccc;
+            text-decoration: none;
+            display: block;
+            padding: 10px 15px;
+            border-radius: 4px;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        
+        .sidebar-menu a:hover,
+        .sidebar-menu a.active {
+            background-color: #ff6b35;
+            color: white;
+        }
+        
+        .admin-section {
+            display: none;
+        }
+        
+        .admin-section.active {
+            display: block;
+        }
+        
+        .form-card {
+            background-color: white;
+            padding: 25px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #ff6b35;
+            box-shadow: 0 0 5px rgba(255, 107, 53, 0.3);
+        }
+        
+        .form-group textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+        
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+        
+        .btn-primary {
+            background-color: #ff6b35;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: #e55a24;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+        }
+        
+        .btn-secondary {
+            background-color: #666;
+            color: white;
+            margin-right: 10px;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #555;
+        }
+        
+        .btn-danger {
+            background-color: #dc3545;
+            color: white;
+            padding: 8px 15px;
+            font-size: 12px;
+        }
+        
+        .btn-danger:hover {
+            background-color: #c82333;
+        }
+        
+        .table-responsive {
+            overflow-x: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: white;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        table thead {
+            background-color: #f8f9fa;
+        }
+        
+        table th,
+        table td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        table th {
+            font-weight: 600;
+            color: #333;
+        }
+        
+        table tbody tr:hover {
+            background-color: #f9f9f9;
+        }
+        
+        .image-preview {
+            max-width: 200px;
+            max-height: 150px;
+            margin-top: 10px;
+            border-radius: 4px;
+            border: 2px solid #ddd;
+        }
+        
+        .file-input-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .file-input-wrapper input[type=file] {
+            display: none;
+        }
+        
+        .file-label {
+            display: inline-block;
+            padding: 12px 25px;
+            background-color: #6c757d;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .file-label:hover {
+            background-color: #5a6268;
+        }
+        
+        .file-name {
+            font-size: 13px;
+            color: #333;
+            word-break: break-all;
+        }
+        
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .login-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .login-box {
+            background-color: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 400px;
+        }
+        
+        .login-box h2 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #333;
+        }
+        
+        .alert {
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .alert-danger {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .logout-btn {
+            background-color: #dc3545;
+            color: white;
+        }
+        
+        .logout-btn:hover {
+            background-color: #c82333;
+        }
+        
+        @media (max-width: 768px) {
+            .admin-sidebar {
+                width: 200px;
+            }
+            
+            .admin-main {
+                margin-left: 200px;
+                padding: 15px;
+            }
+            
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Pantalla de Login -->
+    <div id="loginScreen" class="login-container">
+        <div class="login-box">
+            <h2>🔐 Panel Administrativo</h2>
+            <div id="loginAlert"></div>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="adminUser">Usuario</label>
+                    <input type="text" id="adminUser" required placeholder="Ingrese usuario">
+                </div>
+                <div class="form-group">
+                    <label for="adminPassword">Contraseña</label>
+                    <input type="password" id="adminPassword" required placeholder="Ingrese contraseña">
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Iniciar Sesión</button>
+            </form>
+            <p style="text-align: center; margin-top: 20px; font-size: 12px; color: #666;">
+                Credenciales por defecto:<br>
+                Usuario: admin<br>
+                Contraseña: admin123
+            </p>
+            <p style="text-align: center; margin-top: 15px;">
+                <a href="index.html" style="color: #ff6b35; text-decoration: none; font-weight: 600;">← Volver a la Tienda</a>
+            </p>
+        </div>
+    </div>
+
+    <!-- Panel Administrativo -->
+    <div id="adminPanel" class="admin-container" style="display: none;">
+        <!-- Sidebar -->
+        <aside class="admin-sidebar">
+            <div class="sidebar-title">📊 Tu Zona Táctica CCS</div>
+            <ul class="sidebar-menu">
+                <li><a class="menu-link active" data-section="dashboard">📈 Dashboard</a></li>
+                <li><a class="menu-link" data-section="textos">📝 Gestionar Textos</a></li>
+                <li><a class="menu-link" data-section="productos">🛍️ Gestionar Productos</a></li>
+                <li><a class="menu-link" data-section="verificaciones">🔐 Verificaciones de Identidad</a></li>
+                <li><a class="menu-link" data-section="envios">📦 Programar Envíos</a></li>
+                <li><a class="menu-link" data-section="devoluciones">↩️ Devoluciones</a></li>
+                <li><a class="menu-link" data-section="logo">🖼️ Cambiar Logo</a></li>
+                <li><a class="menu-link" data-section="politicas">📋 Gestionar Políticas</a></li>
+                <li><a class="menu-link" data-section="configuracion">⚙️ Configuración</a></li>
+                <li style="margin-top: 30px; border-top: 1px solid #444; padding-top: 20px;">
+                    <a id="logoutBtn" class="logout-btn">🚪 Cerrar Sesión</a>
+                </li>
+            </ul>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="admin-main">
+            <div class="admin-header">
+                <div>
+                    <h1>Panel de Administración</h1>
+                    <p id="adminWelcome">Bienvenido, Administrador</p>
+                </div>
+                <div id="lastUpdate" style="text-align: right; color: #666; font-size: 12px;">
+                    Última actualización: -
+                </div>
+            </div>
+
+            <!-- Dashboard -->
+            <section id="dashboard" class="admin-section active">
+                <div class="form-card">
+                    <h2>📊 Dashboard</h2>
+                    <div class="grid-2">
+                        <div>
+                            <h3>Productos Totales</h3>
+                            <p style="font-size: 32px; color: #ff6b35;" id="totalProducts">0</p>
+                        </div>
+                        <div>
+                            <h3>Productos Restringidos</h3>
+                            <p style="font-size: 32px; color: #dc3545;" id="restrictedProducts">0</p>
+                        </div>
+                    </div>
+                    <p style="margin-top: 20px; color: #666;">Sistema listo. Utiliza el menú lateral para gestionar contenido.</p>
+                </div>
+            </section>
+
+            <!-- Gestión de Textos -->
+            <section id="textos" class="admin-section">
+                <div class="form-card">
+                    <h2>📝 Gestionar Textos Principales</h2>
+                    <form id="textosForm">
+                        <div class="form-group">
+                            <label for="mainMessage">Mensaje Principal (Título)</label>
+                            <input type="text" id="mainMessage" value="Tu Zona Táctica CCS: Equipamiento Táctico y Policial de Alta Calidad">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="welcomeText">Texto de Bienvenida</label>
+                            <textarea id="welcomeText">Bienvenido a Tu Zona Táctica CCS, tu destino definitivo para encontrar artículos tácticos y policiales de la más alta calidad. Nos enorgullecemos de ofrecer una selección curada de productos, tanto de origen nacional como importados, garantizando que cada artículo cumpla con los más rigurosos estándares de rendimiento y durabilidad.</textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="specializationText">Texto de Especialización</label>
+                            <textarea id="specializationText">En Tu Zona Táctica CCS, entendemos las necesidades específicas de profesionales y entusiastas del equipamiento táctico. Nuestra gama de productos abarca desde equipamiento esencial para fuerzas de seguridad y personal militar, hasta artículos de alta gama para quienes buscan lo mejor en protección, utilidad y fiabilidad.</textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="qualityText">Texto de Calidad</label>
+                            <textarea id="qualityText">Nos dedicamos a proporcionarte lo mejor de ambos mundos. Colaboramos con fabricantes nacionales que destacan por su innovación y calidad, al mismo tiempo que importamos artículos de marcas reconocidas internacionalmente por su excelencia. Esta combinación asegura que siempre encontrarás opciones de vanguardia y probadas en el campo.</textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="commitmentText">Texto de Compromiso</label>
+                            <textarea id="commitmentText">Tu satisfacción es nuestra prioridad. En Tu Zona Táctica CCS, cada producto es seleccionado pensando en su funcionalidad, resistencia y valor. Ya sea que necesites equipamiento para tu labor profesional o para actividades especializadas, puedes confiar en que encontrarás artículos que superarán tus expectativas.</textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="ctaText">Texto CTA (Llamada a la Acción)</label>
+                            <textarea id="ctaText">Explora nuestra tienda online y descubre por qué Tu Zona Táctica CCS es el referente en artículos tácticos y policiales de calidad superior.</textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="returnPolicyText">Política de Devoluciones</label>
+                            <textarea id="returnPolicyText">Si el equipo falla, no ajusta bien en el campo o presenta algún defecto, el proceso de cambio debe ser rápido y eficiente. Disponemos de 5 días hábiles para:</textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">💾 Guardar Cambios</button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- Gestión de Productos -->
+            <section id="productos" class="admin-section">
+                <div class="form-card">
+                    <h2>🛍️ Gestionar Productos</h2>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <button type="button" class="btn btn-primary" id="addProductBtn">➕ Agregar Nuevo Producto</button>
+                    </div>
+
+                    <form id="productForm" style="display: none; margin-bottom: 30px; padding: 20px; border: 2px solid #ff6b35; border-radius: 8px;">
+                        <h3 id="formTitle">Agregar Nuevo Producto</h3>
+                        
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label for="productName">Nombre del Producto</label>
+                                <input type="text" id="productName" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="productPrice">Precio</label>
+                                <input type="number" id="productPrice" step="0.01" required>
+                            </div>
+                        </div>
+
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label for="productStock">Stock Disponible</label>
+                                <input type="number" id="productStock" value="0" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="productCategory">Categoría</label>
+                                <select id="productCategory" required>
+                                    <option value="">Seleccione categoría</option>
+                                    <option value="indumentaria">Indumentaria y Calzado</option>
+                                    <option value="carga">Equipamiento de Carga</option>
+                                    <option value="optica">Óptica e Iluminación</option>
+                                    <option value="accesorios">Accesorios de Defensa</option>
+                                    <option value="restringido">⚠️ Área Restringida</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label for="productWarrantyValue">🛡️ Garantía del Producto (cantidad)</label>
+                                <input type="number" id="productWarrantyValue" value="5" min="0" step="1" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="productWarrantyUnit">Unidad de Garantía</label>
+                                <select id="productWarrantyUnit">
+                                    <option value="dias">Días</option>
+                                    <option value="horas">Horas</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="productDescription">Descripción</label>
+                            <textarea id="productDescription" required></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="productImageFile">Cargar Imagen (JPG, PNG, GIF, WEBP)</label>
+                            <div class="file-input-wrapper">
+                                <label class="file-label" for="productImageFile">📁 Seleccionar Imagen</label>
+                                <input type="file" id="productImageFile" accept="image/jpeg,image/png,image/gif,image/webp">
+                                <span id="productImageFileName" class="file-name"></span>
+                            </div>
+                            <p style="font-size: 12px; color: #999; margin-top: 5px;">O ingrese URL de imagen directamente:</p>
+                            <input type="text" id="productImageUrl" placeholder="https://ejemplo.com/imagen.jpg" style="margin-top: 8px;">
+                            <div id="imagePreviewContainer" style="margin-top: 10px;"></div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="productMaterials">Especificaciones de Material (separadas por comas)</label>
+                            <input type="text" id="productMaterials" placeholder="ej: Cordura®, Gore-Tex®, Ripstop">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="productSizing">Guía de Tallas (separadas por comas)</label>
+                            <input type="text" id="productSizing" placeholder="ej: XS, S, M, L, XL, XXL">
+                        </div>
+
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="productRestricted">
+                                Requiere Verificación de Identidad
+                            </label>
+                        </div>
+
+                        <div>
+                            <button type="submit" class="btn btn-primary">💾 Guardar Producto</button>
+                            <button type="button" class="btn btn-secondary" id="cancelProductBtn">Cancelar</button>
+                        </div>
+                    </form>
+
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Nombre</th>
+                                    <th>Categoría</th>
+                                    <th>Precio</th>
+                                    <th>Stock</th>
+                                    <th>Restringido</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="productsTable">
+                                <tr>
+                                    <td colspan="6" style="text-align: center; color: #999;">No hay productos. Agregue uno.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Gestión de Stock -->
+                <div class="form-card" style="margin-top: 30px;">
+                    <h2>📦 Gestión de Stock - Incremento/Decremento Rápido</h2>
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Producto</th>
+                                    <th>Stock Actual</th>
+                                    <th style="min-width: 200px;">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="stockTable">
+                                <tr>
+                                    <td colspan="3" style="text-align: center; color: #999;">Cargando productos...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Gestión de Verificaciones de Identidad -->
+            <section id="verificaciones" class="admin-section">
+                <div class="form-card">
+                    <h2>🔐 Gestión de Verificaciones de Identidad</h2>
+                    <p style="margin-bottom: 20px; color: #666;">Solicitudes pendientes de verificación de identidad de clientes para acceso a productos restringidos.</p>
+
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Nombre</th>
+                                    <th>Institución</th>
+                                    <th>Estado</th>
+                                    <th>Fecha</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="verificationsTable">
+                                <tr>
+                                    <td colspan="5" style="text-align: center; color: #999;">No hay solicitudes pendientes</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Modal de detalles de verificación -->
+                    <div id="verificationDetailsModal" style="display: none; margin-top: 30px; padding: 20px; background-color: #f9f9f9; border-radius: 8px; border: 2px solid #ff6b35;">
+                        <h3>Detalles de Solicitud</h3>
+                        <div id="verificationDetails"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Programación de Envíos -->
+            <section id="envios" class="admin-section">
+                <div class="form-card">
+                    <h2>🛒 Carritos Pendientes de Envío</h2>
+                    <p style="margin-bottom: 20px; color: #666;">Pedidos confirmados por los clientes. Selecciona un carrito, revisa sus productos y programa su envío con fecha y hora independientes.</p>
+
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Cliente</th>
+                                    <th>Productos</th>
+                                    <th>Total</th>
+                                    <th>Fecha del Pedido</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cartsTable">
+                                <tr>
+                                    <td colspan="5" style="text-align: center; color: #999;">No hay carritos pendientes</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Detalles del carrito seleccionado -->
+                    <div id="cartDetailsModal" style="display: none; margin-top: 30px; padding: 20px; background-color: #f9f9f9; border-radius: 8px; border: 2px solid #ff6b35;">
+                        <h3>🛒 Productos del Carrito</h3>
+                        <div id="cartDetails"></div>
+                        <button class="btn btn-secondary" onclick="closeCartDetails()" style="margin-top: 15px;">Cerrar Detalles</button>
+                    </div>
+
+                    <!-- Formulario de programación (aparece al seleccionar un carrito) -->
+                    <div id="shippingFormCard" style="display: none; margin-top: 30px; padding: 20px; background-color: #fff8f5; border-radius: 8px; border: 2px solid #ff6b35;">
+                        <h3>📦 Programar Envío</h3>
+                        <div id="selectedCartSummary" style="margin-bottom: 20px; padding: 15px; background-color: #fff; border-left: 4px solid #ff6b35; border-radius: 4px;"></div>
+
+                        <form id="shippingForm" style="margin-bottom: 30px; padding: 20px; border: 2px solid #ff6b35; border-radius: 8px;">
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label for="shippingDate">Fecha de Envío</label>
+                                <input type="date" id="shippingDate" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="shippingTime">Hora (opcional)</label>
+                                <input type="time" id="shippingTime">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="shippingNotes">Notas de Envío</label>
+                            <textarea id="shippingNotes" placeholder="Ej: Entrega personal, requiere firma, etc."></textarea>
+                        </div>
+
+                            <button type="submit" class="btn btn-primary">📅 Programar Envío</button>
+                            <button type="button" class="btn btn-secondary" onclick="cancelCartSelection()" style="margin-left: 10px;">Cancelar Selección</button>
+                        </form>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th colspan="7" style="font-size: 16px; text-align: left;">🚚 Envíos Programados</th>
+                                </tr>
+                                <tr>
+                                    <th>Cliente</th>
+                                    <th>Fecha Programada</th>
+                                    <th>Productos</th>
+                                    <th>Total</th>
+                                    <th>Notas</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="shippingTable">
+                                <tr>
+                                    <td colspan="7" style="text-align: center; color: #999;">No hay envíos programados</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="form-card" style="margin-top: 20px;">
+                    <h2>🛡️ Control de Garantía (5 días de devolución)</h2>
+                    <p style="margin-bottom: 20px; color: #666;">Cuenta regresiva visible desde que el envío fue marcado como Entregado. Al cumplir los 5 días, el envío pasa automáticamente a "Entregado y Aprobado".</p>
+                    <div id="warrantyPanel"></div>
+                </div>
+            </section>
+
+            <!-- Gestión de Devoluciones -->
+            <section id="devoluciones" class="admin-section">
+                <div class="form-card">
+                    <h2>↩️ Solicitudes de Devolución</h2>
+                    <p style="margin-bottom: 20px; color: #666;">Solicitudes enviadas por los clientes desde su consulta de garantía. Contáctate con el cliente (teléfono incluido), revisa el equipo y <strong>acepta o rechaza</strong> la devolución (por ejemplo, si el equipo no vino dañado de fábrica).</p>
+
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Cliente</th>
+                                    <th>Productos a Devolver</th>
+                                    <th>Motivo</th>
+                                    <th>Fecha de Solicitud</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="returnsTable">
+                                <tr>
+                                    <td colspan="6" style="text-align: center; color: #999;">No hay solicitudes de devolución</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Cambiar Logo -->
+            <section id="logo" class="admin-section">
+                <div class="form-card">
+                    <h2>🖼️ Gestionar Logo de la Empresa</h2>
+                    
+                    <div class="form-group">
+                        <label>Logo Actual</label>
+                        <div style="margin-top: 10px;">
+                            <img id="currentLogo" src="https://via.placeholder.com/120x80?text=Tu+Zona+Tactica" alt="Logo actual" class="image-preview">
+                        </div>
+                    </div>
+
+                    <form id="logoForm">
+                        <div class="form-group">
+                            <label for="logoFile">Cargar Nuevo Logo</label>
+                            <div class="file-input-wrapper">
+                                <label class="file-label" for="logoFile">📁 Seleccionar Logo</label>
+                                <input type="file" id="logoFile" accept="image/jpeg,image/png,image/gif,image/webp">
+                                <span id="logoFileName" class="file-name"></span>
+                            </div>
+                            <p style="font-size: 12px; color: #999; margin-top: 8px;">O ingrese URL directamente:</p>
+                            <input type="text" id="logoUrl" placeholder="https://ejemplo.com/logo.png" style="margin-top: 8px;">
+                            <p style="font-size: 12px; color: #666; margin-top: 5px;">Dimensiones recomendadas: 200x80 píxeles. Formatos: JPG, PNG, GIF, WEBP</p>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">🔄 Actualizar Logo</button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- Gestión de Políticas -->
+            <section id="politicas" class="admin-section">
+                <div class="form-card">
+                    <h2>📋 Gestionar Políticas</h2>
+                    <form id="policiesForm">
+                        <div class="form-group">
+                            <label for="returnPolicyTitle">Título - Política de Devoluciones</label>
+                            <input type="text" id="returnPolicyTitle" value="Política de Devoluciones - 5 Días de Garantía">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="verificationTitle">Título - Verificación de Identidad</label>
+                            <input type="text" id="verificationTitle" value="Verificación de Identidad - Área Restringida">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="updatesTitle">Título - Actualizaciones Legales</label>
+                            <input type="text" id="updatesTitle" value="Actualizaciones Legales y Normativas">
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">💾 Guardar Políticas</button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- Configuración -->
+            <section id="configuracion" class="admin-section">
+                <div class="form-card">
+                    <h2>⚙️ Configuración General</h2>
+                    <form id="settingsForm">
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label for="phoneNumber">Número Telefónico</label>
+                                <input type="tel" id="phoneNumber" value="+58 424-206-2978" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="email">Email de Contacto</label>
+                                <input type="email" id="email" value="info@tuzonatacticaccs.com" required>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="location">Ubicación</label>
+                            <input type="text" id="location" value="Venezuela - Disponible en toda la República">
+                        </div>
+
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="maintenanceMode">
+                                Modo de Mantenimiento (ocultar tienda a usuarios normales)
+                            </label>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">💾 Guardar Configuración</button>
+                    </form>
+                </div>
+
+                <div class="form-card" style="margin-top: 20px;">
+                    <h2>🔐 Cambiar Contraseña de Admin</h2>
+                    <form id="passwordForm">
+                        <div class="form-group">
+                            <label for="currentPassword">Contraseña Actual</label>
+                            <input type="password" id="currentPassword" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="newPassword">Nueva Contraseña</label>
+                            <input type="password" id="newPassword" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="confirmPassword">Confirmar Nueva Contraseña</label>
+                            <input type="password" id="confirmPassword" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">🔐 Actualizar Contraseña</button>
+                    </form>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="admin-script.js"></script>
+</body>
+</html>

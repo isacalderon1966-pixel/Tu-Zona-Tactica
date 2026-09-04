@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tu Zona Táctica CCS - Equipamiento Táctico y Policial</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Navegación Superior -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo-section">
+                    <img id="headerLogo" src="https://via.placeholder.com/120x80?text=Tu+Zona+Tactica" alt="Tu Zona Táctica CCS" class="logo">
+                    <h1>TU ZONA TÁCTICA CCS</h1>
+                    <span class="tagline">Equipamiento Profesional de Elite</span>
+                </div>
+                <div class="header-actions">
+                    <a href="javascript:void(0);" class="search-icon" title="Ver Carrito" onclick="openCartModal()">
+                        <span class="cart-icon">🛒</span>
+                        <span class="cart-count" id="cartCount">0</span>
+                    </a>
+                    <a href="tel:+584242062978" class="phone-link" id="headerPhone">
+                        <span class="phone-icon">📞</span>
+                        <span class="phone-number">+58 424-206-2978</span>
+                    </a>
+                </div>
+            </div>
+            <nav class="navigation">
+                <a href="#inicio" class="nav-link active">Inicio</a>
+                <a href="#beneficios" class="nav-link">Beneficios</a>
+                <a href="#productos" class="nav-link">Productos</a>
+                <a href="#politicas" class="nav-link">Políticas</a>
+                <a href="#garantia" class="nav-link">Garantía</a>
+                <a href="#contacto" class="nav-link">Contacto</a>
+                <a href="admin.html" class="nav-link admin-link" target="_blank">Admin</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Sección Hero Mejorada -->
+    <section id="inicio" class="hero">
+        <div class="hero-background">
+            <div class="hero-shapes"></div>
+        </div>
+        <div class="container">
+            <div class="hero-content">
+                <div class="hero-text">
+                    <h2>Equipamiento Táctico y Policial de Alta Calidad</h2>
+                    <p class="hero-subtitle">Tu destino definitivo para artículos tácticos de la más alta calidad</p>
+                    <p class="hero-description">Ofrecemos la más amplia selección de equipamiento profesional, nacionales e importados, con garantía de excelencia</p>
+                    <div class="hero-ctas">
+                        <a href="#productos" class="cta-button primary">Explorar Catálogo</a>
+                        <a href="#beneficios" class="cta-button secondary">Nuestros Beneficios</a>
+                    </div>
+                </div>
+                <div class="hero-stats">
+                    <div class="stat-box">
+                        <span class="stat-number" id="statsProducts">0</span>
+                        <span class="stat-label">Productos</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-number">5+</span>
+                        <span class="stat-label">Categorías</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-number">🏆</span>
+                        <span class="stat-label">Premium</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Aviso de Modo Mantenimiento (se activa desde el panel admin) -->
+    <section id="maintenanceBanner" class="maintenance-banner" style="display: none;">
+        <div class="container">
+            <div class="maintenance-icon">🔧</div>
+            <h2>Tienda en Mantenimiento</h2>
+            <p>Estamos realizando actualizaciones en nuestra tienda online. En breve estaremos de vuelta con todo nuestro catálogo disponible.</p>
+            <p class="maintenance-contact">¿Necesitas contactarnos? Llámanos al <a href="tel:+584242062978">+58 424-206-2978</a></p>
+        </div>
+    </section>
+
+    <!-- Sección de Beneficios -->
+    <section id="beneficios" class="benefits-section">
+        <div class="container">
+            <h2>¿Por Qué Elegir Tu Zona Táctica CCS?</h2>
+            <div class="benefits-grid">
+                <div class="benefit-card">
+                    <div class="benefit-icon">🎖️</div>
+                    <h3>Calidad Garantizada</h3>
+                    <p>Equipamiento certificado que cumple con los más altos estándares de rendimiento y durabilidad</p>
+                </div>
+                <div class="benefit-card">
+                    <div class="benefit-icon">🌍</div>
+                    <h3>Nacional e Importado</h3>
+                    <p>Acceso a los mejores fabricantes nacionales e internacionales en un solo lugar</p>
+                </div>
+                <div class="benefit-card">
+                    <div class="benefit-icon">⚡</div>
+                    <h3>Disponibilidad Inmediata</h3>
+                    <p>Stock actualizado en tiempo real con información de disponibilidad en cada producto</p>
+                </div>
+                <div class="benefit-card">
+                    <div class="benefit-icon">🔐</div>
+                    <h3>Especializados</h3>
+                    <p>Fichas técnicas detalladas con especificaciones de material y guía de tallas profesional</p>
+                </div>
+                <div class="benefit-card">
+                    <div class="benefit-icon">↩️</div>
+                    <h3>5 Días Garantía</h3>
+                    <p>Política de devoluciones clara y rápida si el equipo no satisface tus expectativas</p>
+                </div>
+                <div class="benefit-card">
+                    <div class="benefit-icon">📞</div>
+                    <h3>Soporte Profesional</h3>
+                    <p>Asesoramiento personalizado para encontrar el equipamiento perfecto para tus necesidades</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Sección Sobre Nosotros -->
+    <section class="about">
+        <div class="container">
+            <h2>Bienvenido a Tu Zona Táctica CCS</h2>
+            <div id="aboutContent" class="about-content">
+                <p id="mainMessage">
+                    Tu Zona Táctica CCS: Equipamiento Táctico y Policial de Alta Calidad
+                </p>
+                <p id="welcomeText">
+                    Bienvenido a Tu Zona Táctica CCS, tu destino definitivo para encontrar artículos tácticos y policiales de la más alta calidad. Nos enorgullecemos de ofrecer una selección curada de productos, tanto de origen nacional como importados, garantizando que cada artículo cumpla con los más rigurosos estándares de rendimiento y durabilidad.
+                </p>
+            </div>
+
+            <div class="specialization-section">
+                <h3>Nuestra Especialización</h3>
+                <p id="specializationText">
+                    En Tu Zona Táctica CCS, entendemos las necesidades específicas de profesionales y entusiastas del equipamiento táctico. Nuestra gama de productos abarca desde equipamiento esencial para fuerzas de seguridad y personal militar, hasta artículos de alta gama para quienes buscan lo mejor en protección, utilidad y fiabilidad.
+                </p>
+            </div>
+
+            <div class="quality-section">
+                <h3>Calidad Nacional e Importada</h3>
+                <p id="qualityText">
+                    Nos dedicamos a proporcionarte lo mejor de ambos mundos. Colaboramos con fabricantes nacionales que destacan por su innovación y calidad, al mismo tiempo que importamos artículos de marcas reconocidas internacionalmente por su excelencia. Esta combinación asegura que siempre encontrarás opciones de vanguardia y probadas en el campo.
+                </p>
+            </div>
+
+            <div class="commitment-section">
+                <h3>Compromiso con la Excelencia</h3>
+                <p id="commitmentText">
+                    Tu satisfacción es nuestra prioridad. En Tu Zona Táctica CCS, cada producto es seleccionado pensando en su funcionalidad, resistencia y valor. Ya sea que necesites equipamiento para tu labor profesional o para actividades especializadas, puedes confiar en que encontrarás artículos que superarán tus expectativas.
+                </p>
+            </div>
+
+            <div class="cta-section">
+                <p id="ctaText">
+                    Explora nuestra tienda online y descubre por qué Tu Zona Táctica CCS es el referente en artículos tácticos y policiales de calidad superior.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Sección Productos y Navegación Táctica -->
+    <section id="productos" class="products-section">
+        <div class="container">
+            <h2>Catálogo Táctico - Navegación Profesional</h2>
+            
+            <!-- Categorías -->
+            <div class="categories">
+                <button class="category-btn active" data-category="all">Todos</button>
+                <button class="category-btn" data-category="indumentaria">Indumentaria y Calzado</button>
+                <button class="category-btn" data-category="carga">Equipamiento de Carga</button>
+                <button class="category-btn" data-category="optica">Óptica e Iluminación</button>
+                <button class="category-btn" data-category="accesorios">Accesorios de Defensa</button>
+                <button class="category-btn" data-category="restringido">⚠️ Área Restringida</button>
+            </div>
+
+            <!-- Grid de Productos -->
+            <div class="products-grid" id="productsGrid">
+                <!-- Los productos se cargarán aquí dinámicamente -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Modal de Detalles de Producto -->
+    <div id="productModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeProductModal()">&times;</span>
+            <div class="modal-body">
+                <div class="modal-image">
+                    <img id="modalImage" src="" alt="Producto">
+                </div>
+                <div class="modal-details">
+                    <h2 id="modalTitle"></h2>
+                    <p id="modalCategory" class="modal-category"></p>
+                    <p id="modalPrice" class="modal-price"></p>
+                    <div id="modalSpecifications" class="specifications">
+                        <h3>Especificaciones</h3>
+                        <div id="specsList"></div>
+                    </div>
+                    <div id="modalSizing" class="sizing-guide">
+                        <h3>Guía de Tallas</h3>
+                        <div id="sizingList"></div>
+                    </div>
+                    <div id="restrictedWarning" class="restricted-warning" style="display: none;">
+                        <p>⚠️ Este producto requiere verificación de identidad OBLIGATORIA. Se necesita credencial válida de institución de seguridad o militar.</p>
+                        <div id="restrictedVerifyStatus" style="margin-top: 8px;"></div>
+                        <a href="javascript:void(0);" class="verify-btn" onclick="openVerificationModal()" style="margin-top: 10px;">Verificar Identidad</a>
+                    </div>
+                    <button class="add-cart-btn" id="addToCartBtn">Agregar al Carrito</button>
+                    <button class="add-cart-btn" style="width: 100%; margin-top: 10px; background-color: #1a1a1a;" onclick="openCartModal()">🛒 Ver Carrito y Confirmar Pedido</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Carrito -->
+    <div id="cartModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <span class="close" onclick="closeCartModal()">&times;</span>
+            <div class="modal-body" style="grid-template-columns: 1fr;">
+                <h2>🛒 Mi Carrito</h2>
+                <div id="cartItems" style="max-height: 400px; overflow-y: auto;">
+                    <!-- Items se cargarán aquí -->
+                </div>
+                <div id="cartSummary" style="margin-top: 20px; padding-top: 20px; border-top: 2px solid #ddd;">
+                    <div style="font-size: 18px; font-weight: 700; color: #ff6b35;">
+                        Total: $<span id="cartTotal">0.00</span>
+                    </div>
+                </div>
+
+                <div style="margin-top: 15px; border-top: 2px solid #ddd; padding-top: 15px;">
+                    <strong style="display: block; margin-bottom: 10px;">📋 Tus datos para el envío:</strong>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                        <div>
+                            <small style="display: block; font-weight: 700; color: #dc3545; margin-bottom: 3px;">Primer Nombre (Obligatorio)</small>
+                            <input type="text" id="cartFirstName" placeholder="Ej: Marcelo" style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 4px; font-family: inherit; font-size: 14px;">
+                        </div>
+                        <div>
+                            <small style="display: block; font-weight: 700; color: #666; margin-bottom: 3px;">Segundo Nombre (Opcional)</small>
+                            <input type="text" id="cartSecondName" placeholder="Ej: Alejandro" style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 4px; font-family: inherit; font-size: 14px;">
+                        </div>
+                        <div>
+                            <small style="display: block; font-weight: 700; color: #dc3545; margin-bottom: 3px;">Primer Apellido (Obligatorio)</small>
+                            <input type="text" id="cartFirstLastname" placeholder="Ej: Rodríguez" style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 4px; font-family: inherit; font-size: 14px;">
+                        </div>
+                        <div>
+                            <small style="display: block; font-weight: 700; color: #666; margin-bottom: 3px;">Segundo Apellido (Opcional)</small>
+                            <input type="text" id="cartSecondLastname" placeholder="Ej: Gómez" style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 4px; font-family: inherit; font-size: 14px;">
+                        </div>
+                    </div>
+                    <div style="margin-top: 8px;">
+                        <small style="display: block; font-weight: 700; color: #dc3545; margin-bottom: 3px;">📞 Teléfono (Obligatorio)</small>
+                        <input type="tel" id="cartCustomerPhone" placeholder="Ej: 0424-1234567" style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 4px; font-family: inherit; font-size: 14px;">
+                    </div>
+                    <small style="display: block; margin-top: 6px; color: #999;">Con tu teléfono la empresa te contactará para coordinar la entrega y avisarte de tu garantía. Recuerda estos datos: los necesitarás para consultar tu garantía.</small>
+                </div>
+
+                <button class="btn btn-primary" style="width: 100%; padding: 12px; margin-top: 15px; font-size: 16px;" onclick="confirmOrder()">✅ Confirmar Pedido</button>
+                <p style="font-size: 12px; color: #999; margin-top: 8px;">Al confirmar, tu pedido queda registrado con tu nombre y teléfono, y el administrador te programará el envío.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Verificación de Identidad -->
+    <div id="verificationModal" class="modal">
+        <div class="modal-content" style="max-width: 700px;">
+            <span class="close" onclick="closeVerificationModal()">&times;</span>
+            <div class="modal-body" style="grid-template-columns: 1fr;">
+                <h2>🔐 Verificación de Identidad</h2>
+                <p style="color: #666; margin-bottom: 20px;">Complete el siguiente formulario para verificar su identidad y acceder a productos restringidos.</p>
+                
+                <form id="verificationForm">
+                    <div class="form-group">
+                        <label for="verifyName">Nombre Completo</label>
+                        <input type="text" id="verifyName" required placeholder="Ej: Juan Pérez García">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="verifyIdentity">Cédula de Identidad</label>
+                        <input type="text" id="verifyIdentity" required placeholder="Ej: V-12345678">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="verifyCredential">Credencial/Institución</label>
+                        <select id="verifyCredential" required>
+                            <option value="">Seleccione su institución</option>
+                            <option value="policia">Policía Nacional</option>
+                            <option value="gn">Guardia Nacional</option>
+                            <option value="sebin">SEBIN</option>
+                            <option value="militar">Fuerzas Armadas</option>
+                            <option value="inghes">INGHES</option>
+                            <option value="otro">Otra Institución de Seguridad</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="verifyCredentialNumber">Número de Credencial</label>
+                        <input type="text" id="verifyCredentialNumber" required placeholder="Ej: POL-2024-12345">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="verifyEmail">Email de Contacto</label>
+                        <input type="email" id="verifyEmail" required placeholder="Ej: usuario@correo.com">
+                    </div>
+
+                    <button type="submit" class="add-cart-btn" style="width: 100%;">Enviar Verificación</button>
+                </form>
+
+                <div id="verificationStatus" style="display: none; text-align: center; margin-top: 20px;">
+                    <p style="font-size: 16px; color: #ff6b35; font-weight: 700;">⏳ Procesando su identidad...</p>
+                    <p style="color: #666; margin-top: 10px;">El administrador revisará su solicitud en breve. Le notificaremos por correo.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sección de Políticas -->
+    <section id="politicas" class="policies-section">
+        <div class="container">
+            <h2>Políticas y Garantía</h2>
+            
+            <div class="policy-card">
+                <h3>Política de Devoluciones - 5 Días de Garantía</h3>
+                <p id="returnPolicyText">
+                    Si el equipo falla, no ajusta bien en el campo o presenta algún defecto, el proceso de cambio debe ser rápido y eficiente. Disponemos de 5 días hábiles para:
+                </p>
+                <ul>
+                    <li>Inspeccionar el producto y verificar su estado</li>
+                    <li>Procesar cambios por otra talla, color o modelo</li>
+                    <li>Reembolsar el 100% del precio si el defecto es de fabricación</li>
+                    <li>Asesorarte sobre la mejor opción alternativa</li>
+                </ul>
+            </div>
+
+            <div class="policy-card">
+                <h3>Verificación de Identidad - Área Restringida</h3>
+                <p>Ciertos artículos de uso exclusivo policial/militar requieren verificación de identidad:</p>
+                <ul>
+                    <li>Insignias oficiales</li>
+                    <li>Luces de emergencia autorizadas</li>
+                    <li>Equipamiento especializado restringido</li>
+                    <li>Accesorios tácticos certificados</li>
+                </ul>
+                <p><strong>Requisitos:</strong> Cédula de identidad + credencial institucional válida</p>
+            </div>
+
+            <div class="policy-card">
+                <h3>Actualizaciones Legales y Normativas</h3>
+                <p>Nos mantenemos al tanto de las nuevas leyes de porte y normativas de equipo. Verificamos que cada producto cumpla con los estándares vigentes y te mantendremos informado sobre cambios legislativos importantes.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Consulta de Garantía para Clientes -->
+    <section id="garantia" class="policies-section">
+        <div class="container">
+            <h2>🛡️ Consulta tu Garantía</h2>
+            <p style="text-align: center; max-width: 700px; margin: 0 auto 25px; color: #666;">Ingresa <strong>los mismos datos</strong> que usaste al confirmar tu pedido (nombre, apellidos y teléfono). La búsqueda es exacta para proteger la privacidad de cada cliente.</p>
+            <div style="max-width: 600px; margin: 0 auto;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                    <div>
+                        <small style="display: block; font-weight: 700; color: #dc3545; margin-bottom: 3px;">Primer Nombre (Obligatorio)</small>
+                        <input type="text" id="warrantyFirstName" placeholder="Ej: Marcelo" style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 4px; font-family: inherit; font-size: 14px;">
+                    </div>
+                    <div>
+                        <small style="display: block; font-weight: 700; color: #666; margin-bottom: 3px;">Segundo Nombre (Opcional)</small>
+                        <input type="text" id="warrantySecondName" placeholder="Ej: Alejandro" style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 4px; font-family: inherit; font-size: 14px;">
+                    </div>
+                    <div>
+                        <small style="display: block; font-weight: 700; color: #dc3545; margin-bottom: 3px;">Primer Apellido (Obligatorio)</small>
+                        <input type="text" id="warrantyFirstLastname" placeholder="Ej: Rodríguez" style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 4px; font-family: inherit; font-size: 14px;">
+                    </div>
+                    <div>
+                        <small style="display: block; font-weight: 700; color: #666; margin-bottom: 3px;">Segundo Apellido (Opcional)</small>
+                        <input type="text" id="warrantySecondLastname" placeholder="Ej: Gómez" style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 4px; font-family: inherit; font-size: 14px;">
+                    </div>
+                </div>
+                <div style="margin-top: 8px;">
+                    <small style="display: block; font-weight: 700; color: #dc3545; margin-bottom: 3px;">📞 Teléfono (Obligatorio)</small>
+                    <input type="tel" id="warrantyPhone" placeholder="Ej: 0424-1234567" style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 4px; font-family: inherit; font-size: 14px;">
+                </div>
+                <button class="btn btn-primary" style="width: 100%; padding: 12px; font-size: 15px; margin-top: 12px;" onclick="searchWarranty()">🔍 Consultar Garantía</button>
+            </div>
+            <div id="warrantyResults" style="margin-top: 25px;"></div>
+        </div>
+    </section>
+
+    <!-- Sección Contacto -->
+    <section id="contacto" class="contact-section">
+        <div class="container">
+            <h2>Contacto</h2>
+            <div class="contact-info-box">
+                <div class="info-item">
+                    <span class="info-icon">📞</span>
+                    <h3>Teléfono</h3>
+                    <p><a href="tel:+584242062978" id="contactPhone">+58 424-206-2978</a></p>
+                </div>
+                <div class="info-item">
+                    <span class="info-icon">📧</span>
+                    <h3>Email</h3>
+                    <p><a href="mailto:info@tuzonatacticaccs.com" id="contactEmail">info@tuzonatacticaccs.com</a></p>
+                </div>
+                <div class="info-item">
+                    <span class="info-icon">📍</span>
+                    <h3>Ubicación</h3>
+                    <p id="contactLocation">Venezuela - Disponible en toda la República</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2025 Tu Zona Táctica CCS. Todos los derechos reservados.</p>
+            <p>Equipamiento Táctico y Policial de Alta Calidad</p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>

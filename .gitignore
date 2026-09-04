@@ -1,0 +1,12 @@
+# Sistema Operativo
+Thumbs.db
+.DS_Store
+Desktop.ini
+
+# Editor / VS Code
+.vscode/
+*.log
+
+# Respaldos locales
+*.bak
+*~
