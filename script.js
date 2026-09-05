@@ -140,6 +140,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     updateStats();
     updateCartCount();
     loadSettingsFromStorage();
+    loadLogoFromStorage();
 });
 
 // ==================== FUNCIONES DE ALMACENAMIENTO ====================
@@ -180,7 +181,11 @@ function loadTextsFromStorage() {
 }
 
 function loadLogoFromStorage() {
-    const logo = localStorage.getItem('headerLogo') || 'https://via.placeholder.com/120x80?text=Tu+Zona+Tactica';
+    // Prioridad: logo en la nube (Supabase) → localStorage → placeholder
+    const cloudSettings = DB.getSettings();
+    const logo = (DB.isCloud && cloudSettings && cloudSettings.logo)
+        ? cloudSettings.logo
+        : (localStorage.getItem('headerLogo') || 'https://via.placeholder.com/120x80?text=Tu+Zona+Tactica');
     const logoElements = document.querySelectorAll('#headerLogo, #currentLogo');
     logoElements.forEach(el => {
         if (el) el.src = logo;
@@ -837,6 +842,7 @@ DB.onChange(function(key) {
     }
     if (key === 'settings') {
         loadSettingsFromStorage();
+        loadLogoFromStorage();
     }
 });
 

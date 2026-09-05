@@ -513,8 +513,11 @@ function setupLogoForm() {
     const form = document.getElementById('logoForm');
     if (!form) return;
 
-    // Cargar logo actual
-    const currentLogo = localStorage.getItem('headerLogo') || 'https://via.placeholder.com/120x80?text=Tu+Zona+Tactica';
+    // Cargar logo actual (prioridad: nube → localStorage → placeholder)
+    const cloudSettings = DB.getSettings();
+    const currentLogo = (DB.isCloud && cloudSettings && cloudSettings.logo)
+        ? cloudSettings.logo
+        : (localStorage.getItem('headerLogo') || 'https://via.placeholder.com/120x80?text=Tu+Zona+Tactica');
     const logoImg = document.getElementById('currentLogo');
     if (logoImg) logoImg.src = currentLogo;
 
@@ -528,13 +531,24 @@ function setupLogoForm() {
         form.reset();
     }
 
-    function saveLogo(logoData) {
+    async function saveLogo(logoData) {
         try {
             localStorage.setItem('headerLogo', logoData);
         } catch (err) {
             showAdminNotification('Error al guardar el logo: el almacenamiento del navegador está lleno. Use una imagen más ligera.', 'error');
             return;
         }
+
+        // Sincronizar el logo a la nube (visible en todos los dispositivos)
+        if (DB.isCloud && DB.isAuthenticated()) {
+            try {
+                const cloudSettings = Object.assign({}, DB.getSettings() || {}, { logo: logoData });
+                await DB.saveSettings(cloudSettings);
+            } catch (err) {
+                showAdminNotification('Logo guardado localmente, pero sin sincronizar: ' + err.message, 'error');
+            }
+        }
+
         if (logoImg) logoImg.src = logoData;
         showAdminNotification('Logo actualizado correctamente');
         resetLogoForm();
