@@ -375,6 +375,12 @@
             <section id="dashboard" class="admin-section active">
                 <div class="form-card">
                     <h2>📊 Dashboard</h2>
+                    <div id="cloudMigrationCard" style="background-color: #e7f1ff; border: 1px solid #0d6efd; border-radius: 8px; padding: 12px 15px; margin-bottom: 20px; display: none;">
+                        <strong>☁️ Sincronización con Supabase</strong>
+                        <p style="margin: 5px 0; font-size: 13px; color: #444;">Sube los datos guardados en este navegador (productos, pedidos, verificaciones, devoluciones) a la nube para que lleguen desde cualquier dispositivo.</p>
+                        <button class="btn btn-primary" style="padding: 8px 15px;" onclick="migrateLocalData()">☁️ Migrar datos locales ahora</button>
+                        <small id="migrationStatus" style="display: block; margin-top: 6px; color: #555;"></small>
+                    </div>
                     <div class="grid-2">
                         <div>
                             <h3>Productos Totales</h3>
@@ -833,6 +839,9 @@
         </main>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+    <script src="supabase-config.js"></script>
+    <script src="data-layer.js"></script>
     <script src="admin-script.js"></script>
 </body>
 </html>

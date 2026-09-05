@@ -131,7 +131,8 @@ const closeBtn = document.querySelector('.close');
 
 // ==================== INICIALIZACIÓN ====================
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
+    await DB.init();
     loadProductsFromStorage();
     renderProducts(products);
     setupEventListeners();
@@ -143,15 +144,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // ==================== FUNCIONES DE ALMACENAMIENTO ====================
 
-function saveProductsToStorage() {
+async function saveProductsToStorage() {
+    if (DB.isCloud) {
+        try { await DB.setProducts(products); } catch (err) { showNotification('Error al sincronizar: ' + err.message, 'error'); }
+        return;
+    }
     localStorage.setItem('tuzonatacticaProducts', JSON.stringify(products));
 }
 
 function loadProductsFromStorage() {
-    const stored = localStorage.getItem('tuzonatacticaProducts');
-    if (stored) {
-        products = JSON.parse(stored);
-    }
+    // Modo nube: los productos vienen de Supabase; modo local: del navegador
+    products = DB.getProducts().slice();
 }
 
 function loadTextsFromStorage() {
@@ -189,10 +192,14 @@ function loadLogoFromStorage() {
 // Aplica la configuración guardada en el panel admin a la página pública:
 // teléfono, email, ubicación y modo mantenimiento
 function loadSettingsFromStorage() {
-    const phone = localStorage.getItem('setting_phoneNumber');
-    const email = localStorage.getItem('setting_email');
-    const locationText = localStorage.getItem('setting_location');
-    const maintenance = localStorage.getItem('setting_maintenanceMode') === 'true';
+    // Preferir la configuración centralizada (nube); fallback: localStorage
+    const cloudSettings = DB.getSettings();
+    const phone = (cloudSettings && cloudSettings.phoneNumber) || localStorage.getItem('setting_phoneNumber');
+    const email = (cloudSettings && cloudSettings.email) || localStorage.getItem('setting_email');
+    const locationText = (cloudSettings && cloudSettings.location) || localStorage.getItem('setting_location');
+    const maintenance = cloudSettings
+        ? (cloudSettings.maintenanceMode === true || cloudSettings.maintenanceMode === 'true')
+        : localStorage.getItem('setting_maintenanceMode') === 'true';
 
     // Teléfono (header y contacto)
     if (phone) {
@@ -517,6 +524,15 @@ function refreshProductGrid() {
 
 // true si el administrador ya aprobó la verificación de identidad
 function isIdentityVerified() {
+    // MODO NUBE: hay identidad aprobada si existe una verificación aprobada
+    // en la nube con MI nombre completo (guardado al enviar la solicitud)
+    if (DB.isCloud) {
+        const myName = (localStorage.getItem('myVerificationName') || '').trim().toLowerCase();
+        if (!myName) return false;
+        return DB.getVerifications().some(function (v) {
+            return v.status === 'approved' && (v.fullName || v.name || '').trim().toLowerCase() === myName;
+        });
+    }
     return localStorage.getItem('identityVerified') === 'true';
 }
 
@@ -627,7 +643,7 @@ function searchWarranty() {
     const searchName = [firstName, secondName, firstLastname, secondLastname].filter(Boolean).join(' ').toLowerCase();
     const searchDigits = customerPhone.replace(/\D/g, '');
 
-    const shippings = JSON.parse(localStorage.getItem('shippings')) || [];
+    const shippings = DB.getShippings();
     const mine = shippings.filter(s => {
         const n = (s.customerName || '').trim().toLowerCase();
         const p = (s.customerPhone || '').replace(/\D/g, '');
@@ -672,7 +688,7 @@ function searchWarranty() {
         const barColor = (isApproved || info.expired) ? '#6c757d' : '#28a745';
 
         // Estado de las solicitudes de devolución de este envío
-        const returns = JSON.parse(localStorage.getItem('returns')) || [];
+        const returns = DB.getReturns();
         const pendingReq = returns.find(r => r.shippingId === s.id && r.status === 'pendiente');
         const approvedReq = returns.find(r => r.shippingId === s.id && r.status === 'aprobada');
         const rejectedReq = returns.find(r => r.shippingId === s.id && r.status === 'rechazada');
@@ -734,8 +750,8 @@ function toggleReturnForm(shippingId) {
 }
 
 // Envía la solicitud de devolución al administrador
-function submitReturnRequest(shippingId) {
-    const shippings = JSON.parse(localStorage.getItem('shippings')) || [];
+async function submitReturnRequest(shippingId) {
+    const shippings = DB.getShippings();
     const shipping = shippings.find(s => s.id === shippingId);
     if (!shipping) return;
 
@@ -746,7 +762,7 @@ function submitReturnRequest(shippingId) {
     }
 
     // Evita solicitudes pendientes duplicadas para el mismo envío
-    const returns = JSON.parse(localStorage.getItem('returns')) || [];
+    const returns = DB.getReturns();
     if (returns.some(r => r.shippingId === shippingId && r.status === 'pendiente')) {
         showNotification('Ya tienes una solicitud de devolución pendiente para este envío', 'error');
         return;
@@ -776,11 +792,9 @@ function submitReturnRequest(shippingId) {
         reviewNote: ''
     };
 
-    returns.push(request);
-    try {
-        localStorage.setItem('returns', JSON.stringify(returns));
-    } catch (err) {
-        showNotification('Error al enviar la solicitud: el almacenamiento está lleno', 'error');
+    const res = await DB.addReturn(request);
+    if (!res.ok) {
+        showNotification('Error al enviar la solicitud: ' + res.error, 'error');
         return;
     }
 
@@ -803,6 +817,26 @@ window.addEventListener('storage', function(e) {
     if (e.key === 'identityVerified') {
         refreshProductGrid();
         updateRestrictedStatusInModal();
+    }
+});
+
+// Sincronización en vivo (modo nube): cambios en Supabase → refrescar la tienda
+DB.onChange(function(key) {
+    if (key === 'products') {
+        products = DB.getProducts().slice();
+        refreshProductGrid();
+        updateStats();
+    }
+    if (key === 'identityVerified' || key === 'verifications') {
+        refreshProductGrid();
+        updateRestrictedStatusInModal();
+    }
+    if (key === 'shippings') {
+        const res = document.getElementById('warrantyResults');
+        if (res && res.innerHTML.trim() !== '') searchWarranty();
+    }
+    if (key === 'settings') {
+        loadSettingsFromStorage();
     }
 });
 
@@ -932,7 +966,7 @@ function removeFromCart(index) {
 
 let lastOrderConfirmedAt = 0;
 
-function confirmOrder() {
+async function confirmOrder() {
     // Evita pedidos duplicados por doble clic
     if (Date.now() - lastOrderConfirmedAt < 2000) return;
 
@@ -981,7 +1015,7 @@ function confirmOrder() {
     const customerName = [firstName, secondName, firstLastname, secondLastname].filter(Boolean).join(' ');
 
     // Los productos restringidos exigen identidad verificada y aprobada
-    const checkProducts = JSON.parse(localStorage.getItem('tuzonatacticaProducts')) || products;
+    const checkProducts = DB.getProducts();
     const hasRestricted = cart.some(item => {
         const p = checkProducts.find(pp => pp.id === item.id);
         return p && p.restricted;
@@ -994,7 +1028,7 @@ function confirmOrder() {
     }
 
     // Validar disponibilidad contra el stock actual antes de confirmar
-    const storedProducts = JSON.parse(localStorage.getItem('tuzonatacticaProducts')) || products;
+    const storedProducts = DB.isCloud ? DB.getProducts().slice() : (JSON.parse(localStorage.getItem('tuzonatacticaProducts')) || products);
     for (const item of cart) {
         const product = storedProducts.find(p => p.id === item.id);
         if (!product) {
@@ -1007,14 +1041,20 @@ function confirmOrder() {
         }
     }
 
-    // El stock se descuenta AQUÍ (al confirmar el pedido), no al agregar al carrito
-    cart.forEach(item => {
-        const product = storedProducts.find(p => p.id === item.id);
-        if (product) product.stock -= item.quantity;
-    });
-    products = storedProducts;
-    saveProductsToStorage();
-    refreshProductGrid();
+    if (DB.isCloud) {
+        // MODO NUBE: el pedido se registra en Supabase y el ADMIN descuenta
+        // el stock al programar el envío. Aquí solo se valida.
+        products = storedProducts;
+    } else {
+        // MODO LOCAL: el stock se descuenta AQUÍ (al confirmar el pedido)
+        cart.forEach(item => {
+            const product = storedProducts.find(p => p.id === item.id);
+            if (product) product.stock -= item.quantity;
+        });
+        products = storedProducts;
+        saveProductsToStorage();
+        refreshProductGrid();
+    }
 
     // Registrar el pedido en la lista de carritos pendientes del administrador
     const order = {
@@ -1024,24 +1064,13 @@ function confirmOrder() {
         products: cart,
         total: cart.reduce((sum, item) => sum + (item.price * item.quantity), 0),
         status: 'pending',
-        createdAt: new Date().toLocaleString('es-VE')
+        createdAt: new Date().toLocaleString('es-VE'),
+        createdAtIso: new Date().toISOString()
     };
 
-    let carts = JSON.parse(localStorage.getItem('tuzonatacticaCarts')) || [];
-    carts.push(order);
-
-    try {
-        localStorage.setItem('tuzonatacticaCarts', JSON.stringify(carts));
-    } catch (err) {
-        // Revertir el descuento de stock si no se pudo guardar el pedido
-        cart.forEach(item => {
-            const p = storedProducts.find(pr => pr.id === item.id);
-            if (p) p.stock += item.quantity;
-        });
-        products = storedProducts;
-        saveProductsToStorage();
-        refreshProductGrid();
-        showNotification('Error al guardar el pedido: el almacenamiento está lleno', 'error');
+    const res = await DB.addOrder(order);
+    if (!res.ok) {
+        showNotification('Error al enviar el pedido: ' + res.error, 'error');
         return;
     }
 
@@ -1070,6 +1099,15 @@ function openVerificationModal() {
     document.getElementById('verificationModal').classList.add('show');
     document.getElementById('verificationForm').reset();
 
+    // Limpiar el estado de la imagen de credencial
+    verifyCredentialImageData = null;
+    const imgInput = document.getElementById('verifyCredentialImage');
+    const imgName = document.getElementById('verifyCredentialImageName');
+    const imgPreview = document.getElementById('verifyCredentialImagePreview');
+    if (imgInput) imgInput.value = '';
+    if (imgName) imgName.textContent = '';
+    if (imgPreview) { imgPreview.style.display = 'none'; imgPreview.src = ''; }
+
     const form = document.getElementById('verificationForm');
     const status = document.getElementById('verificationStatus');
 
@@ -1095,28 +1133,128 @@ function closeVerificationModal() {
     document.getElementById('verificationModal').classList.remove('show');
 }
 
+// ==================== IMAGEN DE CREDENCIAL (VERIFICACIÓN) ====================
+
+let verifyCredentialImageData = null;
+
+// Convierte una imagen en Base64 comprimiéndola (máx. 800px) para el localStorage
+function compressImageFilePublic(file, maxWidth, quality) {
+    return new Promise(function(resolve, reject) {
+        if (!file || !file.type || !file.type.startsWith('image/')) {
+            reject(new Error('El archivo no es una imagen válida (use JPG, PNG o WEBP).'));
+            return;
+        }
+        if (file.size > 15 * 1024 * 1024) {
+            reject(new Error('La imagen es demasiado pesada (máximo 15MB).'));
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onerror = function() {
+            reject(new Error('No se pudo leer el archivo.'));
+        };
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onerror = function() {
+                reject(new Error('La imagen no es válida o está dañada.'));
+            };
+            img.onload = function() {
+                const scale = Math.min(1, maxWidth / img.width);
+                const canvas = document.createElement('canvas');
+                canvas.width = Math.max(1, Math.round(img.width * scale));
+                canvas.height = Math.max(1, Math.round(img.height * scale));
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                resolve(canvas.toDataURL('image/jpeg', quality));
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+// Vista previa + compresión de la credencial al seleccionarla
+const verifyCredentialImageInput = document.getElementById('verifyCredentialImage');
+if (verifyCredentialImageInput) {
+    verifyCredentialImageInput.addEventListener('change', function(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const nameSpan = document.getElementById('verifyCredentialImageName');
+        const preview = document.getElementById('verifyCredentialImagePreview');
+        if (nameSpan) nameSpan.textContent = '⏳ Procesando imagen...';
+        if (preview) preview.style.display = 'none';
+
+        compressImageFilePublic(file, 800, 0.8).then(function(dataUrl) {
+            verifyCredentialImageData = dataUrl;
+            if (nameSpan) nameSpan.textContent = '✓ ' + file.name;
+            if (preview) { preview.src = dataUrl; preview.style.display = 'block'; }
+        }).catch(function(err) {
+            verifyCredentialImageData = null;
+            if (nameSpan) nameSpan.textContent = '';
+            if (preview) preview.style.display = 'none';
+            event.target.value = '';
+            showNotification(err.message, 'error');
+        });
+    });
+}
+
 // Manejo del formulario de verificación
 document.addEventListener('DOMContentLoaded', function() {
     const verificationForm = document.getElementById('verificationForm');
     if (verificationForm) {
-        verificationForm.addEventListener('submit', function(e) {
+        verificationForm.addEventListener('submit', async function(e) {
             e.preventDefault();
+
+            const firstName = document.getElementById('verifyFirstName').value.trim();
+            const secondName = document.getElementById('verifySecondName').value.trim();
+            const firstLastname = document.getElementById('verifyFirstLastname').value.trim();
+            const secondLastname = document.getElementById('verifySecondLastname').value.trim();
+            const policeBody = document.getElementById('verifyPoliceBody').value.trim();
+
+            // Nombre completo: mismo formato que el pedido
+            const fullName = [firstName, secondName, firstLastname, secondLastname].filter(Boolean).join(' ');
+
+            if (!fullName) {
+                showNotification('Completa tu primer nombre y primer apellido', 'error');
+                return;
+            }
+            if (!policeBody) {
+                showNotification('Ingresa el cuerpo policial al que perteneces', 'error');
+                return;
+            }
+            if (!verifyCredentialImageData) {
+                showNotification('📸 Debes subir la foto de tu credencial policial (obligatorio)', 'error');
+                return;
+            }
 
             const verification = {
                 id: Date.now(),
-                name: document.getElementById('verifyName').value,
+                name: fullName,
+                fullName: fullName,
+                firstName: firstName,
+                secondName: secondName,
+                firstLastname: firstLastname,
+                secondLastname: secondLastname,
                 identity: document.getElementById('verifyIdentity').value,
+                policeBody: policeBody,
                 credential: document.getElementById('verifyCredential').value,
                 credentialNumber: document.getElementById('verifyCredentialNumber').value,
                 email: document.getElementById('verifyEmail').value,
+                credentialImage: verifyCredentialImageData,
                 status: 'pending', // pending, approved, rejected
                 submittedAt: new Date().toLocaleString('es-VE')
             };
 
-            // Guardar verificación
-            let verifications = JSON.parse(localStorage.getItem('verifications')) || [];
-            verifications.push(verification);
-            localStorage.setItem('verifications', JSON.stringify(verifications));
+            // Guardar verificación (y recordar mi nombre para el estado de aprobación)
+            if (DB.isCloud) localStorage.setItem('myVerificationName', fullName);
+            const res = await DB.addVerification(verification);
+            if (!res.ok) {
+                showNotification('Error al enviar la verificación: ' + res.error, 'error');
+                return;
+            }
 
             // Mostrar estado de procesamiento
             document.getElementById('verificationForm').style.display = 'none';

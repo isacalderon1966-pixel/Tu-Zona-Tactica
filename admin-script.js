@@ -17,16 +17,38 @@ function getAdminPassword() {
 
 // ==================== INICIALIZACIÓN ====================
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
+    await DB.init();
     checkAdminLogin();
     loadAdminData();
     setupAdminEventListeners();
+
+    if (DB.isCloud) {
+        const lbl = document.querySelector('label[for="adminUser"]');
+        if (lbl) lbl.textContent = 'Email de Administrador';
+        const inp = document.getElementById('adminUser');
+        if (inp) inp.placeholder = 'Ej: admin@tuzonatactica.com';
+    }
+
+    // Sincronización en vivo (modo nube): cambios remotos → re-dibujar
+    DB.onChange(function(key) {
+        if (key === 'products') {
+            adminProducts = DB.getProducts();
+            renderProductsTable();
+            renderStockTable();
+            updateDashboard();
+        }
+        if (key === 'orders') renderCartsTable();
+        if (key === 'verifications') renderVerificationsTable();
+        if (key === 'returns') { renderReturnsTable(); renderShippingTable(); }
+        if (key === 'shippings') { renderShippingTable(); renderWarrantyPanel(); }
+    });
 });
 
 // ==================== AUTENTICACIÓN ====================
 
 function checkAdminLogin() {
-    const isLoggedIn = sessionStorage.getItem('adminLoggedIn');
+    const isLoggedIn = DB.isAuthenticated();
     const loginScreen = document.getElementById('loginScreen');
     const adminPanel = document.getElementById('adminPanel');
 
@@ -40,14 +62,28 @@ function checkAdminLogin() {
     }
 }
 
-document.getElementById('loginForm').addEventListener('submit', function(e) {
+document.getElementById('loginForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     
     const user = document.getElementById('adminUser').value;
     const password = document.getElementById('adminPassword').value;
     const alertDiv = document.getElementById('loginAlert');
 
-    // Verificación simple (en producción, usar backend seguro)
+    // MODO NUBE: autenticación real con Supabase (email + contraseña)
+    if (DB.isCloud) {
+        const res = await DB.signIn(user, password);
+        if (res.ok) {
+            sessionStorage.setItem('adminUser', user);
+            checkAdminLogin();
+            alertDiv.innerHTML = '';
+            await loadAdminData();
+        } else {
+            alertDiv.innerHTML = '<div class="alert alert-danger">❌ ' + res.error + '</div>';
+        }
+        return;
+    }
+
+    // MODO LOCAL: credenciales clásicas
     if (user === adminDefaultUser && password === getAdminPassword()) {
         sessionStorage.setItem('adminLoggedIn', 'true');
         sessionStorage.setItem('adminUser', user);
@@ -58,7 +94,8 @@ document.getElementById('loginForm').addEventListener('submit', function(e) {
     }
 });
 
-document.getElementById('logoutBtn').addEventListener('click', function() {
+document.getElementById('logoutBtn').addEventListener('click', async function() {
+    if (DB.isCloud) await DB.signOut();
     sessionStorage.removeItem('adminLoggedIn');
     sessionStorage.removeItem('adminUser');
     location.reload();
@@ -108,7 +145,7 @@ function updateLastUpdate() {
 // ==================== DASHBOARD ====================
 
 function updateDashboard() {
-    adminProducts = JSON.parse(localStorage.getItem('tuzonatacticaProducts')) || [];
+    adminProducts = DB.getProducts();
     const total = adminProducts.length;
     const restricted = adminProducts.filter(p => p.restricted).length;
 
@@ -562,41 +599,52 @@ function setupSettingsForm() {
     const form = document.getElementById('settingsForm');
     if (!form) return;
 
-    // Cargar configuración guardada
-    const settings = {
+    // Cargar configuración guardada (la nube tiene prioridad; fallback: localStorage)
+    const defaults = {
         phoneNumber: '+58 424-206-2978',
         email: 'info@tuzonatacticaccs.com',
         location: 'Venezuela - Disponible en toda la República',
         maintenanceMode: false
     };
+    const cloud = (DB.isCloud && DB.getSettings()) || {};
+    const settings = Object.assign({}, defaults, cloud);
 
-    Object.keys(settings).forEach(key => {
-        const stored = localStorage.getItem(`setting_${key}`);
-        if (stored) {
-            const element = document.getElementById(key);
-            if (element) {
-                if (element.type === 'checkbox') {
-                    element.checked = stored === 'true';
-                } else {
-                    element.value = stored;
-                }
+    Object.keys(defaults).forEach(key => {
+        const element = document.getElementById(key);
+        if (element) {
+            const value = settings[key];
+            if (element.type === 'checkbox') {
+                element.checked = value === true || value === 'true';
+            } else if (value !== undefined && value !== null) {
+                element.value = value;
             }
         }
     });
 
-    form.addEventListener('submit', function(e) {
+    form.addEventListener('submit', async function(e) {
         e.preventDefault();
 
-        Object.keys(settings).forEach(key => {
+        const newSettings = {};
+        Object.keys(defaults).forEach(key => {
             const element = document.getElementById(key);
             if (element) {
                 const value = element.type === 'checkbox' ? element.checked : element.value;
+                newSettings[key] = value;
                 localStorage.setItem(`setting_${key}`, value);
             }
         });
 
+        // Guardar también en la nube (visible desde cualquier dispositivo)
+        if (DB.isCloud && DB.isAuthenticated()) {
+            try {
+                await DB.saveSettings(newSettings);
+            } catch (err) {
+                showAdminNotification('Guardado local, pero sin sincronizar: ' + err.message, 'error');
+            }
+        }
+
         showAdminNotification('Configuración actualizada correctamente');
-        
+
         // Actualizar en la página pública
         if (window.opener && !window.opener.closed) {
             window.opener.location.reload();
@@ -657,7 +705,7 @@ function renderVerificationsTable() {
     const table = document.getElementById('verificationsTable');
     if (!table) return;
 
-    const verifications = JSON.parse(localStorage.getItem('verifications')) || [];
+    const verifications = DB.getVerifications();
     const pending = verifications.filter(v => v.status === 'pending');
 
     if (pending.length === 0) {
@@ -667,8 +715,8 @@ function renderVerificationsTable() {
 
     table.innerHTML = pending.map(v => `
         <tr>
-            <td><strong>${v.name}</strong></td>
-            <td>${v.credential}</td>
+            <td><strong>${escapeHtml(v.fullName || v.name || '—')}</strong>${v.policeBody ? '<br><small>🚔 ' + escapeHtml(v.policeBody) + '</small>' : ''}${v.credentialImage ? '<br><small>📸 Credencial adjunta</small>' : '<br><small style="color: #999;">Sin imagen</small>'}</td>
+            <td>${escapeHtml(v.credential || '—')}</td>
             <td><span class="badge badge-warning">${v.status === 'pending' ? 'Pendiente' : v.status === 'approved' ? 'Aprobado' : 'Rechazado'}</span></td>
             <td>${v.submittedAt}</td>
             <td>
@@ -681,7 +729,7 @@ function renderVerificationsTable() {
 }
 
 function viewVerificationDetails(index) {
-    const verifications = JSON.parse(localStorage.getItem('verifications')) || [];
+    const verifications = DB.getVerifications();
     const v = verifications[index];
 
     const detailsDiv = document.getElementById('verificationDetails');
@@ -689,54 +737,76 @@ function viewVerificationDetails(index) {
         <table style="width: 100%; margin-top: 15px;">
             <tr>
                 <td><strong>Nombre:</strong></td>
-                <td>${v.name}</td>
+                <td>${escapeHtml(v.fullName || v.name || '—')}</td>
             </tr>
             <tr>
                 <td><strong>Cédula:</strong></td>
-                <td>${v.identity}</td>
+                <td>${escapeHtml(v.identity || '—')}</td>
             </tr>
             <tr>
                 <td><strong>Institución:</strong></td>
-                <td>${v.credential}</td>
+                <td>${escapeHtml(v.credential || '—')}</td>
+            </tr>
+            <tr>
+                <td><strong>Cuerpo Policial:</strong></td>
+                <td>${escapeHtml(v.policeBody || '—')}</td>
             </tr>
             <tr>
                 <td><strong>Credencial #:</strong></td>
-                <td>${v.credentialNumber}</td>
+                <td>${escapeHtml(v.credentialNumber || '—')}</td>
             </tr>
             <tr>
                 <td><strong>Email:</strong></td>
-                <td>${v.email}</td>
+                <td>${escapeHtml(v.email || '—')}</td>
             </tr>
             <tr>
                 <td><strong>Solicitado:</strong></td>
                 <td>${v.submittedAt}</td>
             </tr>
         </table>
+        ${v.credentialImage ? `
+        <div style="margin-top: 15px;">
+            <strong>📸 Credencial del solicitante:</strong><br>
+            <img src="${v.credentialImage}" alt="Credencial de ${escapeHtml(v.fullName || v.name || 'cliente')}" style="max-width: 100%; max-height: 400px; margin-top: 8px; border: 2px solid #ddd; border-radius: 6px;">
+            <br><small style="color: #666;">Verifica que el nombre y el número de credencial coincidan con la imagen.</small>
+        </div>` : '<p style="color: #999; margin-top: 10px;"><small>Sin imagen de credencial (solicitud antigua o no adjuntada)</small></p>'}
     `;
     document.getElementById('verificationDetailsModal').style.display = 'block';
 }
 
-function approveVerification(index) {
+async function approveVerification(index) {
     if (!confirm('¿Aprobar esta verificación? El cliente podrá comprar productos del Área Restringida.')) return;
 
-    const verifications = JSON.parse(localStorage.getItem('verifications')) || [];
-    verifications[index].status = 'approved';
-    localStorage.setItem('verifications', JSON.stringify(verifications));
+    const verifications = DB.getVerifications();
+    const res = await DB.updateVerification(String(verifications[index].id), {
+        status: 'approved',
+        reviewedAt: new Date().toLocaleString('es-VE')
+    });
+    if (!res.ok) {
+        showAdminNotification('Error al actualizar: ' + res.error, 'error');
+        return;
+    }
 
     // Habilitar la compra de productos restringidos para este navegador/cliente
     localStorage.setItem('identityVerified', 'true');
-    localStorage.setItem('identityVerifiedName', verifications[index].name || '');
+    localStorage.setItem('identityVerifiedName', verifications[index].fullName || verifications[index].name || '');
 
     renderVerificationsTable();
     showAdminNotification('✓ Verificación aprobada: identidad habilitada para compras restringidas');
 }
 
-function rejectVerification(index) {
+async function rejectVerification(index) {
     if (!confirm('¿Rechazar esta verificación de identidad?')) return;
 
-    const verifications = JSON.parse(localStorage.getItem('verifications')) || [];
-    verifications[index].status = 'rejected';
-    localStorage.setItem('verifications', JSON.stringify(verifications));
+    const verifications = DB.getVerifications();
+    const res = await DB.updateVerification(String(verifications[index].id), {
+        status: 'rejected',
+        reviewedAt: new Date().toLocaleString('es-VE')
+    });
+    if (!res.ok) {
+        showAdminNotification('Error al actualizar: ' + res.error, 'error');
+        return;
+    }
     renderVerificationsTable();
     showAdminNotification('✕ Verificación rechazada');
 }
@@ -831,7 +901,7 @@ function renderWarrantyPanel() {
     const panel = document.getElementById('warrantyPanel');
     if (!panel) return;
 
-    const shippings = JSON.parse(localStorage.getItem('shippings')) || [];
+    const shippings = DB.getShippings();
     const delivered = shippings.filter(s => s.status === 'entregado' || s.status === 'aprobado');
 
     if (delivered.length === 0) {
@@ -889,31 +959,38 @@ function renderWarrantyPanel() {
 }
 
 // Pasa a "Entregado y Aprobado" los envíos cuyo plazo de devolución de 5 días terminó
-function checkDeliveries() {
-    const shippings = JSON.parse(localStorage.getItem('shippings')) || [];
-    let changed = false;
-    shippings.forEach(s => {
-        if (s.status === 'entregado' && s.deliveredAt) {
-            const totalMs = (s.warrantyHours && s.warrantyHours > 0) ? s.warrantyHours * 3600000 : RETURN_WINDOW_MS;
-            const end = new Date(s.deliveredAt).getTime() + totalMs;
-            if (Date.now() >= end) {
-                s.status = 'aprobado';
-                s.approvedAt = new Date().toLocaleString('es-VE');
-                changed = true;
+let _checkingDeliveries = false;
+async function checkDeliveries() {
+    if (_checkingDeliveries) return;
+    _checkingDeliveries = true;
+    try {
+        const shippings = DB.getShippings();
+        let changed = false;
+        shippings.forEach(s => {
+            if (s.status === 'entregado' && s.deliveredAt) {
+                const totalMs = (s.warrantyHours && s.warrantyHours > 0) ? s.warrantyHours * 3600000 : RETURN_WINDOW_MS;
+                const end = new Date(s.deliveredAt).getTime() + totalMs;
+                if (Date.now() >= end) {
+                    s.status = 'aprobado';
+                    s.approvedAt = new Date().toLocaleString('es-VE');
+                    changed = true;
+                }
             }
+        });
+        if (changed) {
+            await DB.setShippings(shippings);
+            showAdminNotification('✓ Envíos marcados como Entregados y Aprobados (fin del plazo de devolución)');
         }
-    });
-    if (changed) {
-        localStorage.setItem('shippings', JSON.stringify(shippings));
-        showAdminNotification('✓ Envíos marcados como Entregados y Aprobados (fin del plazo de devolución)');
+    } finally {
+        _checkingDeliveries = false;
     }
 }
 
 // El administrador marca el envío como entregado: inicia la cuenta regresiva de garantía
-function markDelivered(index) {
+async function markDelivered(index) {
     if (!confirm('¿Marcar este envío como ENTREGADO? Esto iniciará la cuenta regresiva de la garantía para devoluciones.')) return;
 
-    const shippings = JSON.parse(localStorage.getItem('shippings')) || [];
+    const shippings = DB.getShippings().slice();
     const shipping = shippings[index];
     if (!shipping) return;
 
@@ -945,36 +1022,36 @@ function markDelivered(index) {
     shipping.status = 'entregado';
     shipping.deliveredAt = new Date().toISOString();
     shipping.warrantyHours = warrantyHours;
-    localStorage.setItem('shippings', JSON.stringify(shippings));
+    await DB.setShippings(shippings);
 
     renderShippingTable();
     showAdminNotification('✓ Envío entregado. Garantía de ' + getWarrantyLabel(warrantyHours) + ' en curso.');
 }
 
 // Elimina un envío definitivamente (útil para registros duplicados o erróneos)
-function deleteShipping(index) {
+async function deleteShipping(index) {
     if (!confirm('¿ELIMINAR este envío definitivamente? Esta acción no se puede deshacer.')) return;
 
-    const shippings = JSON.parse(localStorage.getItem('shippings')) || [];
+    const shippings = DB.getShippings().slice();
     shippings.splice(index, 1);
-    localStorage.setItem('shippings', JSON.stringify(shippings));
+    await DB.setShippings(shippings);
 
     renderShippingTable();
     showAdminNotification('🗑️ Envío eliminado');
 }
 
 // El administrador aprueba la devolución manualmente: finaliza la garantía de inmediato
-function approveReturn(index) {
+async function approveReturn(index) {
     if (!confirm('¿APROBAR la devolución de este envío? La garantía terminará de inmediato.')) return;
 
-    const shippings = JSON.parse(localStorage.getItem('shippings')) || [];
+    const shippings = DB.getShippings().slice();
     const shipping = shippings[index];
     if (!shipping) return;
 
     shipping.status = 'aprobado';
     shipping.approvedAt = new Date().toLocaleString('es-VE');
     shipping.approvedManually = true;
-    localStorage.setItem('shippings', JSON.stringify(shippings));
+    await DB.setShippings(shippings);
 
     renderShippingTable();
     showAdminNotification('✓ Devolución aprobada manualmente. Garantía finalizada.');
@@ -986,7 +1063,7 @@ function renderReturnsTable() {
     const table = document.getElementById('returnsTable');
     if (!table) return;
 
-    const returns = JSON.parse(localStorage.getItem('returns')) || [];
+    const returns = DB.getReturns();
 
     if (returns.length === 0) {
         table.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #999;">No hay solicitudes de devolución. Las solicitudes de los clientes aparecerán aquí.</td></tr>';
@@ -1029,25 +1106,30 @@ function renderReturnsTable() {
 }
 
 // Acepta la solicitud de devolución: finaliza la garantía del envío correspondiente
-function acceptReturnRequest(index) {
+async function acceptReturnRequest(index) {
     if (!confirm('¿ACEPTAR esta devolución? Se finalizará la garantía del envío y deberás coordinar la recogida con el cliente.')) return;
 
-    const returns = JSON.parse(localStorage.getItem('returns')) || [];
+    const returns = DB.getReturns();
     const req = returns[index];
     if (!req) return;
 
-    req.status = 'aprobada';
-    req.reviewedAt = new Date().toLocaleString('es-VE');
-    localStorage.setItem('returns', JSON.stringify(returns));
+    const res = await DB.updateReturn(String(req.id), {
+        status: 'aprobada',
+        reviewedAt: new Date().toLocaleString('es-VE')
+    });
+    if (!res.ok) {
+        showAdminNotification('Error al actualizar: ' + res.error, 'error');
+        return;
+    }
 
     // Finaliza la garantía del envío correspondiente
-    const shippings = JSON.parse(localStorage.getItem('shippings')) || [];
-    const shipping = shippings.find(s => s.id === req.shippingId);
+    const shippings = DB.getShippings().slice();
+    const shipping = shippings.find(s => String(s.id) === String(req.shippingId));
     if (shipping && shipping.status === 'entregado') {
         shipping.status = 'aprobado';
         shipping.approvedAt = new Date().toLocaleString('es-VE');
         shipping.approvedManually = true;
-        localStorage.setItem('shippings', JSON.stringify(shippings));
+        await DB.setShippings(shippings);
         renderShippingTable();
     }
 
@@ -1056,18 +1138,23 @@ function acceptReturnRequest(index) {
 }
 
 // Rechaza la solicitud (ej: el equipo no venía dañado de fábrica)
-function rejectReturnRequest(index) {
+async function rejectReturnRequest(index) {
     const note = prompt('❌ Motivo del rechazo (opcional). Ej: El equipo no presentó daños de fábrica:', '');
     if (note === null) return; // cancelado
 
-    const returns = JSON.parse(localStorage.getItem('returns')) || [];
+    const returns = DB.getReturns();
     const req = returns[index];
     if (!req) return;
 
-    req.status = 'rechazada';
-    req.reviewedAt = new Date().toLocaleString('es-VE');
-    req.reviewNote = note.trim();
-    localStorage.setItem('returns', JSON.stringify(returns));
+    const res = await DB.updateReturn(String(req.id), {
+        status: 'rechazada',
+        reviewedAt: new Date().toLocaleString('es-VE'),
+        reviewNote: note.trim()
+    });
+    if (!res.ok) {
+        showAdminNotification('Error al actualizar: ' + res.error, 'error');
+        return;
+    }
 
     renderReturnsTable();
     showAdminNotification('✕ Devolución rechazada. La garantía del envío sigue su curso.');
@@ -1087,7 +1174,7 @@ function renderCartsTable() {
     const table = document.getElementById('cartsTable');
     if (!table) return;
 
-    const carts = JSON.parse(localStorage.getItem('tuzonatacticaCarts')) || [];
+    const carts = DB.getOrders();
     const pending = carts.filter(c => c.status === 'pending');
 
     if (pending.length === 0) {
@@ -1110,8 +1197,7 @@ function renderCartsTable() {
 }
 
 function viewCartDetails(cartId) {
-    const carts = JSON.parse(localStorage.getItem('tuzonatacticaCarts')) || [];
-    const cart = carts.find(c => c.id === cartId);
+    const cart = DB.getOrders().find(c => c.id === cartId);
     if (!cart) return;
 
     const rows = cart.products.map(p => `
@@ -1156,8 +1242,7 @@ function closeCartDetails() {
 }
 
 function selectCartForShipping(cartId) {
-    const carts = JSON.parse(localStorage.getItem('tuzonatacticaCarts')) || [];
-    const cart = carts.find(c => c.id === cartId);
+    const cart = DB.getOrders().find(c => c.id === cartId);
     if (!cart) return;
 
     selectedCartId = cartId;
@@ -1193,7 +1278,7 @@ function setupShippingForm() {
 
     let lastShippingScheduledAt = 0;
 
-    form.addEventListener('submit', function(e) {
+    form.addEventListener('submit', async function(e) {
         e.preventDefault();
 
         // Evita envíos duplicados por doble clic
@@ -1204,8 +1289,7 @@ function setupShippingForm() {
             return;
         }
 
-        const carts = JSON.parse(localStorage.getItem('tuzonatacticaCarts')) || [];
-        const selectedCart = carts.find(c => c.id === selectedCartId);
+        const selectedCart = DB.getOrders().find(c => c.id === selectedCartId);
         if (!selectedCart) {
             showAdminNotification('El carrito seleccionado ya no existe', 'error');
             cancelCartSelection();
@@ -1227,13 +1311,22 @@ function setupShippingForm() {
             createdAt: new Date().toLocaleString('es-VE')
         };
 
-        let shippings = JSON.parse(localStorage.getItem('shippings')) || [];
+        const shippings = DB.getShippings().slice();
         shippings.push(shipping);
-        localStorage.setItem('shippings', JSON.stringify(shippings));
+        await DB.setShippings(shippings);
 
         // Marcar el carrito del cliente como programado (sale de los pendientes)
         selectedCart.status = 'scheduled';
-        localStorage.setItem('tuzonatacticaCarts', JSON.stringify(carts));
+        await DB.updateOrder(String(selectedCart.id), { status: 'scheduled' });
+
+        // MODO NUBE: descontar el stock al programar el envío
+        if (DB.isCloud) {
+            (selectedCart.products || []).forEach(function (item) {
+                const p = adminProducts.find(function (pp) { return String(pp.id) === String(item.id); });
+                if (p) p.stock = Math.max(0, p.stock - (item.quantity || 0));
+            });
+            await DB.setProducts(adminProducts);
+        }
 
         lastShippingScheduledAt = Date.now();
 
@@ -1256,8 +1349,8 @@ function renderShippingTable() {
     // Actualiza el panel de control de garantía (cuenta regresiva de 5 días)
     renderWarrantyPanel();
 
-    const shippings = JSON.parse(localStorage.getItem('shippings')) || [];
-    const returns = JSON.parse(localStorage.getItem('returns')) || [];
+    const shippings = DB.getShippings();
+    const returns = DB.getReturns();
 
     if (shippings.length === 0) {
         table.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #999;">No hay envíos programados</td></tr>';
@@ -1294,7 +1387,7 @@ function renderShippingTable() {
 }
 
 function viewShippingDetails(index) {
-    const shippings = JSON.parse(localStorage.getItem('shippings')) || [];
+    const shippings = DB.getShippings();
     const shipping = shippings[index];
     if (!shipping) return;
 
@@ -1339,54 +1432,96 @@ function viewShippingDetails(index) {
     `);
 }
 
-function cancelShipping(index) {
+async function cancelShipping(index) {
     if (!confirm('¿Cancelar este envío?')) return;
 
-    const shippings = JSON.parse(localStorage.getItem('shippings')) || [];
+    const shippings = DB.getShippings().slice();
     const shipping = shippings[index];
 
     // Devolver el carrito del cliente a la lista de pendientes
     if (shipping && shipping.cartId) {
-        const carts = JSON.parse(localStorage.getItem('tuzonatacticaCarts')) || [];
-        const cart = carts.find(c => c.id === shipping.cartId);
-        if (cart) {
-            cart.status = 'pending';
-            localStorage.setItem('tuzonatacticaCarts', JSON.stringify(carts));
-        }
+        await DB.updateOrder(String(shipping.cartId), { status: 'pending' });
     }
 
     shippings.splice(index, 1);
-    localStorage.setItem('shippings', JSON.stringify(shippings));
+    await DB.setShippings(shippings);
     renderShippingTable();
     renderCartsTable();
-    showAdminNotification('Envío cancelado. El carrito volvió a la lista de pendientes.');
+    showAdminNotification('✕ Envío cancelado. El carrito volvió a la lista de pendientes.');
 }
 
 // ==================== ALMACENAMIENTO ====================
 
-function loadAdminData() {
-    adminProducts = JSON.parse(localStorage.getItem('tuzonatacticaProducts')) || [];
+async function loadAdminData() {
+    adminProducts = DB.getProducts();
     renderProductsTable();
     renderCartsTable();
     renderShippingTable();
     renderReturnsTable();
+    renderVerificationsTable();
+    renderWarrantyPanel();
+    updateDashboard();
+    updateLastUpdate();
+
+    // Migración automática (una sola vez): datos locales → nube
+    if (DB.isCloud && DB.isAuthenticated() && DB.getProducts().length === 0 && !localStorage.getItem('migratedToCloud_v1')) {
+        const localProducts = JSON.parse(localStorage.getItem('tuzonatacticaProducts')) || [];
+        if (localProducts.length) {
+            try {
+                const res = await DB.migrateLocalToCloud();
+                localStorage.setItem('migratedToCloud_v1', 'true');
+                adminProducts = DB.getProducts();
+                renderProductsTable();
+                renderStockTable();
+                updateDashboard();
+                showAdminNotification('☁️ Datos locales migrados: ' + res.summary);
+            } catch (err) {
+                showAdminNotification('Error al migrar datos: ' + err.message, 'error');
+            }
+        }
+    }
+
+    // Mostrar la tarjeta de sincronización solo en modo nube
+    const cloudCard = document.getElementById('cloudMigrationCard');
+    if (cloudCard) cloudCard.style.display = DB.isCloud ? 'block' : 'none';
 }
 
-function saveAdminProducts() {
+// Botón del dashboard: migra los datos guardados en este navegador a Supabase
+async function migrateLocalData() {
+    const status = document.getElementById('migrationStatus');
+    if (status) status.textContent = '⏳ Migrando datos...';
+
+    const res = await DB.migrateLocalToCloud();
+    if (res.ok) {
+        if (status) status.textContent = '✅ ' + res.summary;
+        showAdminNotification('☁️ Migración completada: ' + res.summary);
+        adminProducts = DB.getProducts();
+        renderProductsTable();
+        renderStockTable();
+        updateDashboard();
+        renderCartsTable();
+        renderVerificationsTable();
+        renderReturnsTable();
+        renderShippingTable();
+    } else {
+        if (status) status.textContent = '❌ ' + res.error;
+        showAdminNotification('❌ ' + res.error, 'error');
+    }
+}
+
+async function saveAdminProducts() {
     try {
-        localStorage.setItem('tuzonatacticaProducts', JSON.stringify(adminProducts));
+        await DB.setProducts(adminProducts);
     } catch (err) {
-        showAdminNotification('Error al guardar: el almacenamiento del navegador está lleno. Use imágenes más ligeras o URLs.', 'error');
+        showAdminNotification('Error al guardar: ' + (err.message || 'almacenamiento lleno. Use imágenes más ligeras o URLs.'), 'error');
     }
 }
 
 // Re-sincroniza el catálogo desde localStorage ANTES de modificarlo,
 // para no pisar cambios hechos por la tienda (ej: stock descontado por un pedido)
 function syncAdminProducts() {
-    try {
-        const stored = JSON.parse(localStorage.getItem('tuzonatacticaProducts'));
-        if (Array.isArray(stored)) adminProducts = stored;
-    } catch (err) { /* si falla, se mantiene lo cargado en memoria */ }
+    const stored = DB.getProducts();
+    if (Array.isArray(stored) && stored.length) adminProducts = stored;
 }
 
 // Sincronización en vivo entre pestañas (tienda ↔ admin):

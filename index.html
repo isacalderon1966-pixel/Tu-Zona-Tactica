@@ -275,15 +275,32 @@
                 <p style="color: #666; margin-bottom: 20px;">Complete el siguiente formulario para verificar su identidad y acceder a productos restringidos.</p>
                 
                 <form id="verificationForm">
-                    <div class="form-group">
-                        <label for="verifyName">Nombre Completo</label>
-                        <input type="text" id="verifyName" required placeholder="Ej: Juan Pérez García">
+                    <small style="display: block; font-weight: 700; color: #333; margin-bottom: 8px;">1️⃣ Tus datos personales:</small>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div>
+                            <small style="display: block; font-weight: 700; color: #dc3545; margin-bottom: 3px;">Primer Nombre (Obligatorio)</small>
+                            <input type="text" id="verifyFirstName" required placeholder="Ej: Juan" style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 4px; font-family: inherit;">
+                        </div>
+                        <div>
+                            <small style="display: block; font-weight: 700; color: #666; margin-bottom: 3px;">Segundo Nombre (Opcional)</small>
+                            <input type="text" id="verifySecondName" placeholder="Ej: Alejandro" style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 4px; font-family: inherit;">
+                        </div>
+                        <div>
+                            <small style="display: block; font-weight: 700; color: #dc3545; margin-bottom: 3px;">Primer Apellido (Obligatorio)</small>
+                            <input type="text" id="verifyFirstLastname" required placeholder="Ej: Pérez" style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 4px; font-family: inherit;">
+                        </div>
+                        <div>
+                            <small style="display: block; font-weight: 700; color: #666; margin-bottom: 3px;">Segundo Apellido (Opcional)</small>
+                            <input type="text" id="verifySecondLastname" placeholder="Ej: García" style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 4px; font-family: inherit;">
+                        </div>
                     </div>
 
-                    <div class="form-group">
+                    <div class="form-group" style="margin-top: 12px;">
                         <label for="verifyIdentity">Cédula de Identidad</label>
                         <input type="text" id="verifyIdentity" required placeholder="Ej: V-12345678">
                     </div>
+
+                    <small style="display: block; font-weight: 700; color: #333; margin: 15px 0 8px;">2️⃣ Tus datos policiales:</small>
 
                     <div class="form-group">
                         <label for="verifyCredential">Credencial/Institución</label>
@@ -299,6 +316,11 @@
                     </div>
 
                     <div class="form-group">
+                        <label for="verifyPoliceBody">Cuerpo Policial al que Pertenece (Obligatorio)</label>
+                        <input type="text" id="verifyPoliceBody" required placeholder="Ej: Policía Municipal de Caracas - División de Operaciones">
+                    </div>
+
+                    <div class="form-group">
                         <label for="verifyCredentialNumber">Número de Credencial</label>
                         <input type="text" id="verifyCredentialNumber" required placeholder="Ej: POL-2024-12345">
                     </div>
@@ -306,6 +328,19 @@
                     <div class="form-group">
                         <label for="verifyEmail">Email de Contacto</label>
                         <input type="email" id="verifyEmail" required placeholder="Ej: usuario@correo.com">
+                    </div>
+
+                    <small style="display: block; font-weight: 700; color: #333; margin: 15px 0 8px;">3️⃣ Aval de tu credencial:</small>
+
+                    <div class="form-group">
+                        <small style="display: block; font-weight: 700; color: #dc3545; margin-bottom: 3px;">📸 Foto de la Credencial Policial (Obligatorio)</small>
+                        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                            <label for="verifyCredentialImage" style="display: inline-block; padding: 10px 20px; background-color: #6c757d; color: white; border-radius: 4px; cursor: pointer; font-weight: 600;">📁 Subir Foto de Credencial</label>
+                            <span id="verifyCredentialImageName" style="font-size: 13px; color: #333;"></span>
+                        </div>
+                        <input type="file" id="verifyCredentialImage" accept="image/jpeg,image/png,image/webp" style="display: none;">
+                        <img id="verifyCredentialImagePreview" alt="Vista previa de la credencial" style="display: none; max-width: 100%; max-height: 180px; margin-top: 10px; border: 2px solid #ddd; border-radius: 6px;">
+                        <small style="display: block; margin-top: 5px; color: #999;">La imagen se comprime automáticamente. Debe ser legible para validar tu identidad.</small>
                     </div>
 
                     <button type="submit" class="add-cart-btn" style="width: 100%;">Enviar Verificación</button>
@@ -422,6 +457,9 @@
         </div>
     </footer>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+    <script src="supabase-config.js"></script>
+    <script src="data-layer.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
