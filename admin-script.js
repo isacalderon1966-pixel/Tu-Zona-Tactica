@@ -672,18 +672,12 @@ function setupPasswordForm() {
     const form = document.getElementById('passwordForm');
     if (!form) return;
 
-    form.addEventListener('submit', function(e) {
+    form.addEventListener('submit', async function(e) {
         e.preventDefault();
 
         const currentPassword = document.getElementById('currentPassword').value;
         const newPassword = document.getElementById('newPassword').value;
         const confirmPassword = document.getElementById('confirmPassword').value;
-
-        // Verificar contraseña actual
-        if (currentPassword !== getAdminPassword()) {
-            showAdminNotification('Contraseña actual incorrecta', 'error');
-            return;
-        }
 
         // Verificar que las nuevas contraseñas coincidan
         if (newPassword !== confirmPassword) {
@@ -697,7 +691,24 @@ function setupPasswordForm() {
             return;
         }
 
-        // Actualizar contraseña de forma persistente (en producción, usar backend seguro)
+        // MODO NUBE: cambiar la contraseña real del usuario admin en Supabase
+        if (DB.isCloud) {
+            const res = await DB.changePassword(currentPassword, newPassword);
+            if (!res.ok) {
+                showAdminNotification(res.error, 'error');
+                return;
+            }
+            showAdminNotification('✓ Contraseña actualizada en Supabase. Úsala en tu próximo inicio de sesión.');
+            form.reset();
+            return;
+        }
+
+        // MODO LOCAL: verificar contraseña actual
+        if (currentPassword !== getAdminPassword()) {
+            showAdminNotification('Contraseña actual incorrecta', 'error');
+            return;
+        }
+
         try {
             localStorage.setItem('adminPassword', newPassword);
         } catch (err) {

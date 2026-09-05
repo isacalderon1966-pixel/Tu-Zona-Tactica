@@ -373,6 +373,22 @@ const DB = (function () {
             return mode === 'supabase' ? authed : (sessionStorage.getItem('adminLoggedIn') === 'true');
         },
 
+        // Cambia la contraseña del admin autenticado (verifica la actual primero)
+        async changePassword(currentPassword, newPassword) {
+            if (mode !== 'supabase') return { ok: false, error: 'Supabase no está configurado' };
+            const { data } = await client.auth.getSession();
+            const email = data && data.session ? data.session.user.email : null;
+            if (!email) return { ok: false, error: 'Sesión no encontrada' };
+
+            // Verificar la contraseña actual re-autenticando
+            const { error: errVerify } = await client.auth.signInWithPassword({ email: email, password: currentPassword });
+            if (errVerify) return { ok: false, error: 'Contraseña actual incorrecta' };
+
+            const { error } = await client.auth.updateUser({ password: newPassword });
+            if (error) return { ok: false, error: error.message };
+            return { ok: true };
+        },
+
         // ---- MIGRACIÓN: datos locales → nube ----
         async migrateLocalToCloud() {
             if (mode !== 'supabase') return { ok: false, error: 'Supabase no está configurado' };
