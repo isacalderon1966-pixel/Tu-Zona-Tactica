@@ -1214,15 +1214,15 @@ function renderCartsTable() {
             <td>$${cart.total.toFixed(2)}</td>
             <td>${cart.createdAt}</td>
             <td>
-                <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 12px;" onclick="viewCartDetails(${cart.id})">👁 Ver Productos</button>
-                <button class="btn btn-primary" style="padding: 4px 8px; font-size: 12px; margin-left: 5px;" onclick="selectCartForShipping(${cart.id})">📦 Programar Envío</button>
+                <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 12px;" onclick="viewCartDetails('${String(cart.id)}')">👁 Ver Productos</button>
+                <button class="btn btn-primary" style="padding: 4px 8px; font-size: 12px; margin-left: 5px;" onclick="selectCartForShipping('${String(cart.id)}')">📦 Programar Envío</button>
             </td>
         </tr>
     `).join('');
 }
 
 function viewCartDetails(cartId) {
-    const cart = DB.getOrders().find(c => c.id === cartId);
+    const cart = DB.getOrders().find(c => String(c.id) === String(cartId));
     if (!cart) return;
 
     const rows = cart.products.map(p => `
@@ -1267,7 +1267,7 @@ function closeCartDetails() {
 }
 
 function selectCartForShipping(cartId) {
-    const cart = DB.getOrders().find(c => c.id === cartId);
+    const cart = DB.getOrders().find(c => String(c.id) === String(cartId));
     if (!cart) return;
 
     selectedCartId = cartId;
@@ -1314,7 +1314,7 @@ function setupShippingForm() {
             return;
         }
 
-        const selectedCart = DB.getOrders().find(c => c.id === selectedCartId);
+        const selectedCart = DB.getOrders().find(c => String(c.id) === String(selectedCartId));
         if (!selectedCart) {
             showAdminNotification('El carrito seleccionado ya no existe', 'error');
             cancelCartSelection();

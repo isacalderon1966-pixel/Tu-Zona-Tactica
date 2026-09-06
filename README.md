@@ -156,6 +156,26 @@ Gestión de envíos por carrito de cada cliente:
 
 ---
 
+## ☁️ Base de Datos (Supabase)
+
+La tienda funciona en dos modos automáticamente:
+
+- **Modo NUBE (Supabase configurado):** productos, pedidos, verificaciones, devoluciones, logo y ajustes se guardan en Supabase y se sincronizan EN VIVO entre todos los dispositivos.
+- **Modo LOCAL:** si `supabase-config.js` no está configurado, todo se guarda en localStorage del navegador.
+
+**Instalación del backend:**
+1. Crea un proyecto en https://supabase.com
+2. Ejecuta `supabase-setup.sql` en el SQL Editor (puedes re-ejecutarlo cuando quieras: usa `drop policy if exists` y aplica siempre la versión más reciente de las políticas)
+3. Copia la Project URL y la anon key en `supabase-config.js`
+4. Crea el usuario admin en Supabase → Authentication → Users
+
+**⚠️ Actualización de seguridad (importante):**
+Si tu proyecto se creó con una versión antigua del script, **vuelve a ejecutar `supabase-setup.sql` completo** en el SQL Editor. Las versiones anteriores permitían que cualquiera con la clave anon leyera todos los pedidos (nombres y teléfonos) y las verificaciones de identidad (con fotos de credenciales). La versión actual protege esas tablas y agrega la función RPC `identity_is_approved` para que el cliente consulte su estado sin exponer datos.
+
+**Recomendación pendiente:** la tabla `returns` sigue siendo de lectura pública porque la consulta de garantía del cliente muestra el estado de su solicitud. En una próxima versión conviene migrarla también a una RPC privada.
+
+---
+
 ## 📱 Características
 
 ### Página Pública:

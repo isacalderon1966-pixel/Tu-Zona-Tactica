@@ -361,6 +361,9 @@ const DB = (function () {
             const { data, error } = await client.auth.signInWithPassword({ email: email, password: password });
             if (error) return { ok: false, error: error.message };
             authed = true;
+            // Recargar los datos con los permisos de usuario autenticado:
+            // las tablas protegidas por RLS (ej: orders) no se cargan como anónimo
+            try { await loadAll(); } catch (err) { console.error('Error al recargar datos tras iniciar sesión:', err); }
             return { ok: true };
         },
 
@@ -371,6 +374,19 @@ const DB = (function () {
 
         isAuthenticated() {
             return mode === 'supabase' ? authed : (sessionStorage.getItem('adminLoggedIn') === 'true');
+        },
+
+        // Consulta PRIVADA de identidad aprobada (sin leer la tabla verifications,
+        // que contiene fotos de credenciales y está protegida por RLS).
+        // Devuelve true/false, o null si la función RPC aún no existe en Supabase
+        // (en ese caso el llamador usa el método legado de lectura pública).
+        async checkIdentityApproved(fullName) {
+            if (mode !== 'supabase' || !client) return null;
+            try {
+                const { data, error } = await client.rpc('identity_is_approved', { p_full_name: fullName });
+                if (error) return null;
+                return !!data;
+            } catch (err) { return null; }
         },
 
         // Cambia la contraseña del admin autenticado (verifica la actual primero)

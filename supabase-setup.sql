@@ -56,32 +56,74 @@ alter table orders enable row level security;
 alter table verifications enable row level security;
 alter table returns enable row level security;
 
--- Lectura pública (la tienda necesita leer productos y envíos)
+-- Nota: "drop policy if exists" permite volver a ejecutar este script sin errores
+-- y ACTUALIZA las políticas a la versión más reciente.
+
+-- Lectura pública SOLO de lo que la tienda necesita (productos, envíos y ajustes)
+drop policy if exists "app_data_select" on app_data;
 create policy "app_data_select" on app_data for select using (true);
-create policy "orders_select" on orders for select using (true);
-create policy "verifications_select" on verifications for select using (true);
+
+-- PEDIDOS: solo el ADMIN autenticado puede leerlos (contienen nombres y teléfonos)
+drop policy if exists "orders_select" on orders;
+create policy "orders_select" on orders for select using (auth.role() = 'authenticated');
+
+-- VERIFICACIONES: solo el ADMIN autenticado puede leerlas (contienen fotos de credenciales).
+-- El cliente consulta su estado con la función RPC identity_is_approved (más abajo).
+drop policy if exists "verifications_select" on verifications;
+create policy "verifications_select" on verifications for select using (auth.role() = 'authenticated');
+
+-- DEVOLUCIONES: lectura pública (la consulta de garantía del cliente muestra su estado)
+drop policy if exists "returns_select" on returns;
 create policy "returns_select" on returns for select using (true);
 
 -- Los clientes pueden ENVIAR pedidos, verificaciones y devoluciones
+drop policy if exists "orders_insert" on orders;
 create policy "orders_insert" on orders for insert with check (true);
+drop policy if exists "verifications_insert" on verifications;
 create policy "verifications_insert" on verifications for insert with check (true);
+drop policy if exists "returns_insert" on returns;
 create policy "returns_insert" on returns for insert with check (true);
 
 -- Solo el ADMIN autenticado modifica o elimina
+drop policy if exists "app_data_admin_write" on app_data;
 create policy "app_data_admin_write" on app_data for all
     using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+drop policy if exists "orders_admin_update" on orders;
 create policy "orders_admin_update" on orders for update
     using (auth.role() = 'authenticated');
+drop policy if exists "orders_admin_delete" on orders;
 create policy "orders_admin_delete" on orders for delete
     using (auth.role() = 'authenticated');
+drop policy if exists "verifications_admin_update" on verifications;
 create policy "verifications_admin_update" on verifications for update
     using (auth.role() = 'authenticated');
+drop policy if exists "verifications_admin_delete" on verifications;
 create policy "verifications_admin_delete" on verifications for delete
     using (auth.role() = 'authenticated');
+drop policy if exists "returns_admin_update" on returns;
 create policy "returns_admin_update" on returns for update
     using (auth.role() = 'authenticated');
+drop policy if exists "returns_admin_delete" on returns;
 create policy "returns_admin_delete" on returns for delete
     using (auth.role() = 'authenticated');
+
+-- 5.1) FUNCIÓN RPC PARA VERIFICAR IDENTIDAD SIN EXPONER CREDENCIALES
+-- El cliente envía su nombre completo y recibe SOLO true/false (nunca los datos de otros)
+create or replace function public.identity_is_approved(p_full_name text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+    select exists (
+        select 1 from verifications
+        where status = 'approved'
+          and lower(btrim(full_name)) = lower(btrim(p_full_name))
+    );
+$$;
+
+grant execute on function public.identity_is_approved(text) to anon, authenticated;
 
 -- 6) SINCRONIZACIÓN EN VIVO (Realtime)
 -- Habilita estas tablas en: Database → Replication → supabase_realtime

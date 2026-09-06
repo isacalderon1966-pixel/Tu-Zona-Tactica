@@ -133,6 +133,7 @@ const closeBtn = document.querySelector('.close');
 
 document.addEventListener('DOMContentLoaded', async function() {
     await DB.init();
+    refreshIdentityApproval();
     loadProductsFromStorage();
     renderProducts(products);
     setupEventListeners();
@@ -155,7 +156,15 @@ async function saveProductsToStorage() {
 
 function loadProductsFromStorage() {
     // Modo nube: los productos vienen de Supabase; modo local: del navegador
-    products = DB.getProducts().slice();
+    let stored = DB.getProducts();
+
+    // Primera visita en modo local (sin datos guardados): sembrar el catálogo inicial
+    if ((!stored || stored.length === 0) && !DB.isCloud && localStorage.getItem('tuzonatacticaProducts') === null) {
+        localStorage.setItem('tuzonatacticaProducts', JSON.stringify(products));
+        stored = products;
+    }
+
+    products = (stored || []).slice();
 }
 
 function loadTextsFromStorage() {
@@ -528,10 +537,15 @@ function refreshProductGrid() {
 // ==================== ESTADO DE VERIFICACIÓN DE IDENTIDAD ====================
 
 // true si el administrador ya aprobó la verificación de identidad
+let identityApprovalCache = null; // true/false = confirmado en la nube; null = sin confirmar (método legado)
+
 function isIdentityVerified() {
-    // MODO NUBE: hay identidad aprobada si existe una verificación aprobada
-    // en la nube con MI nombre completo (guardado al enviar la solicitud)
+    // MODO NUBE: prioridad = consulta PRIVADA por RPC (no expone la tabla de credenciales)
     if (DB.isCloud) {
+        if (identityApprovalCache === true) return true;
+        if (identityApprovalCache === false) return false;
+        // Método legado (mientras la función identity_is_approved no exista en Supabase):
+        // busca una verificación aprobada con MI nombre completo (guardado al enviar la solicitud)
         const myName = (localStorage.getItem('myVerificationName') || '').trim().toLowerCase();
         if (!myName) return false;
         return DB.getVerifications().some(function (v) {
@@ -539,6 +553,19 @@ function isIdentityVerified() {
         });
     }
     return localStorage.getItem('identityVerified') === 'true';
+}
+
+// Consulta a la nube (RPC segura) si MI identidad está aprobada y guarda el resultado
+async function refreshIdentityApproval() {
+    if (!DB.isCloud) return;
+    const myName = (localStorage.getItem('myVerificationName') || '').trim();
+    if (!myName) { identityApprovalCache = null; return; }
+    const result = await DB.checkIdentityApproved(myName);
+    if (result !== null) {
+        identityApprovalCache = result;
+        refreshProductGrid();
+        updateRestrictedStatusInModal();
+    }
 }
 
 // Actualiza el estado de verificación mostrado en el modal de producto abierto
@@ -665,17 +692,17 @@ function searchWarranty() {
     }
 
     results.innerHTML = '<h3 style="margin-bottom: 15px;">📦 Tus envíos (' + mine.length + ')</h3>' + mine.map(s => {
-        const productsText = (s.products || []).map(p => p.name + ' x' + p.quantity).join(' • ');
+        const productsText = (s.products || []).map(p => escapeHtml(p.name) + ' x' + p.quantity).join(' • ');
 
         if (s.status === 'programado') {
             return `
             <div style="border: 1px solid #ddd; border-left: 5px solid #ffc107; border-radius: 8px; padding: 15px; margin-bottom: 15px; background-color: #fff;">
                 <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
-                    <strong>👤 ${s.customerName}</strong> <span class="badge badge-warning">Programado</span>
+                    <strong>👤 ${escapeHtml(s.customerName)}</strong> <span class="badge badge-warning">Programado</span>
                 </div>
-                <p style="margin: 4px 0;">📞 Teléfono: ${s.customerPhone || '—'}</p>
+                <p style="margin: 4px 0;">📞 Teléfono: ${escapeHtml(s.customerPhone) || '—'}</p>
                 <p style="margin: 8px 0 4px;">🛍️ <strong>Productos:</strong> ${productsText}</p>
-                <p style="margin: 4px 0;">📅 Tu envío está programado para: <strong>${s.shippingDate} — ${s.shippingTime}</strong></p>
+                <p style="margin: 4px 0;">📅 Tu envío está programado para: <strong>${escapeHtml(s.shippingDate)} — ${escapeHtml(s.shippingTime)}</strong></p>
                 <small style="color: #999;">🛡️ La garantía de devolución empieza cuando tu envío sea entregado.</small>
             </div>`;
         }
@@ -684,7 +711,7 @@ function searchWarranty() {
         if (!info) {
             return `
             <div style="border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
-                <strong>👤 ${s.customerName}</strong>
+                <strong>👤 ${escapeHtml(s.customerName)}</strong>
                 <p style="margin: 8px 0 4px;">🛍️ <strong>Productos:</strong> ${productsText}</p>
             </div>`;
         }
@@ -709,9 +736,9 @@ function searchWarranty() {
         return `
         <div style="border: 1px solid #ddd; border-left: 5px solid ${barColor}; border-radius: 8px; padding: 15px; margin-bottom: 15px; background-color: #fff;">
             <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
-                <strong>👤 ${s.customerName}</strong> ${statusHtml}
+                <strong>👤 ${escapeHtml(s.customerName)}</strong> ${statusHtml}
             </div>
-            <p style="margin: 4px 0;">📞 Teléfono: ${s.customerPhone || '—'}</p>
+            <p style="margin: 4px 0;">📞 Teléfono: ${escapeHtml(s.customerPhone) || '—'}</p>
             <p style="margin: 8px 0 4px;">🛍️ <strong>Productos:</strong> ${productsText}</p>
             <p style="margin: 4px 0;">📬 Entregado: ${info.deliveredLabel} • ⏰ Límite de devolución: ${info.deadlineLabel}</p>
             <p style="margin: 4px 0; font-weight: 700; color: ${isApproved ? '#6c757d' : '#28a745'};">${warrantyText}</p>
@@ -722,16 +749,16 @@ function searchWarranty() {
             ${pendingReq ? `
             <div style="background-color: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; padding: 10px; margin-top: 10px;">
                 <strong>↩️ Solicitud de devolución PENDIENTE</strong><br>
-                <small>El administrador te contactará al ${s.customerPhone || 'tu teléfono'}.<br>Productos: ${pendingReq.products.map(p => p.name + ' x' + p.quantity).join(', ')}</small>
+                <small>El administrador te contactará al ${escapeHtml(s.customerPhone) || 'tu teléfono'}.<br>Productos: ${pendingReq.products.map(p => escapeHtml(p.name) + ' x' + p.quantity).join(', ')}</small>
             </div>` : ''}
             ${approvedReq ? `
             <div style="background-color: #d4edda; border: 1px solid #28a745; border-radius: 6px; padding: 10px; margin-top: 10px;">
-                <strong>✅ Tu devolución fue APROBADA</strong>${approvedReq.reviewedAt ? ' (' + approvedReq.reviewedAt + ')' : ''}<br>
+                <strong>✅ Tu devolución fue APROBADA</strong>${approvedReq.reviewedAt ? ' (' + escapeHtml(approvedReq.reviewedAt) + ')' : ''}<br>
                 <small>Coordina la entrega del producto con la empresa.</small>
             </div>` : ''}
             ${rejectedReq ? `
             <div style="background-color: #f8d7da; border: 1px solid #dc3545; border-radius: 6px; padding: 10px; margin-top: 10px;">
-                <strong>❌ Tu solicitud de devolución fue RECHAZADA</strong>${rejectedReq.reviewedAt ? ' (' + rejectedReq.reviewedAt + ')' : ''}${rejectedReq.reviewNote ? '<br><small>Motivo del admin: ' + rejectedReq.reviewNote + '</small>' : ''}
+                <strong>❌ Tu solicitud de devolución fue RECHAZADA</strong>${rejectedReq.reviewedAt ? ' (' + escapeHtml(rejectedReq.reviewedAt) + ')' : ''}${rejectedReq.reviewNote ? '<br><small>Motivo del admin: ' + escapeHtml(rejectedReq.reviewNote) + '</small>' : ''}
             </div>` : ''}
             ${(!isApproved && !info.expired && !pendingReq) ? `
             <button class="btn btn-danger" style="width: 100%; margin-top: 10px; padding: 10px;" onclick="toggleReturnForm(${s.id})">📦 Solicitar Devolución de Producto</button>
@@ -739,7 +766,7 @@ function searchWarranty() {
                 <strong>Selecciona los productos a devolver:</strong>
                 ${(s.products || []).map((p, i) => `
                 <label style="display: block; margin-top: 6px; cursor: pointer;">
-                    <input type="checkbox" class="return-check-${s.id}" value="${i}"> ${p.name} x${p.quantity}
+                    <input type="checkbox" class="return-check-${s.id}" value="${i}"> ${escapeHtml(p.name)} x${p.quantity}
                 </label>`).join('')}
                 <textarea id="returnReason-${s.id}" placeholder="Motivo (opcional): describe el problema del equipo" style="width: 100%; margin-top: 8px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-family: inherit; min-height: 60px;"></textarea>
                 <button class="btn btn-primary" style="margin-top: 8px; width: 100%; padding: 10px;" onclick="submitReturnRequest(${s.id})">📤 Enviar Solicitud de Devolución</button>
@@ -833,6 +860,7 @@ DB.onChange(function(key) {
         updateStats();
     }
     if (key === 'identityVerified' || key === 'verifications') {
+        refreshIdentityApproval();
         refreshProductGrid();
         updateRestrictedStatusInModal();
     }
@@ -845,6 +873,17 @@ DB.onChange(function(key) {
         loadLogoFromStorage();
     }
 });
+
+// Escapa caracteres HTML para renderizar de forma segura datos ingresados por usuarios
+function escapeHtml(text) {
+    if (text === null || text === undefined) return '';
+    return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
 
 function showNotification(message, type = 'success') {
     const notification = document.createElement('div');
@@ -1261,6 +1300,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 showNotification('Error al enviar la verificación: ' + res.error, 'error');
                 return;
             }
+            refreshIdentityApproval();
 
             // Mostrar estado de procesamiento
             document.getElementById('verificationForm').style.display = 'none';
